@@ -96,14 +96,21 @@ def _setup_ephemeris():
 def _patch_swe_object():
     _setup_ephemeris()
 
+    def _f(v):
+        while isinstance(v, (tuple, list)):
+            v = v[0]
+        return float(v)
+
     def safe_calc_ut(jd, sweObj):
         try:
             data, flg = swisseph.calc_ut(jd, sweObj, swisseph.FLG_SWIEPH | swisseph.FLG_SPEED)
-            return list(data) if len(data) >= 5 else list(data) + [0.0] * (5 - len(data))
+            data = [_f(v) for v in data]
+            return data if len(data) >= 5 else data + [0.0] * (5 - len(data))
         except Exception:
             try:
                 data, flg = swisseph.calc_ut(jd, sweObj, swisseph.FLG_SPEED)
-                return list(data) if len(data) >= 5 else list(data) + [0.0] * (5 - len(data))
+                data = [_f(v) for v in data]
+                return data if len(data) >= 5 else data + [0.0] * (5 - len(data))
             except Exception:
                 return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
@@ -119,6 +126,13 @@ def _patch_swe_object():
         }
 
     flatlib_swe.sweObject = patched_sweObject
+
+    def patched_sweObjectLon(obj, jd):
+        sweObj = flatlib_swe.SWE_OBJECTS[obj]
+        data = safe_calc_ut(jd, sweObj)
+        return data[0]
+
+    flatlib_swe.sweObjectLon = patched_sweObjectLon
 
 
 _patch_swe_object()
