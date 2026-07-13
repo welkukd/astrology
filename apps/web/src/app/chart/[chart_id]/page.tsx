@@ -13,7 +13,7 @@ export default function ChartPage() {
   const router = useRouter();
   const params = useParams();
   const chartId = params.chart_id as string;
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [chart, setChart] = useState<any>(null);
   const [interpretations, setInterpretations] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -23,10 +23,10 @@ export default function ChartPage() {
   const [answer, setAnswer] = useState('');
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (authLoading) return;
     if (!session) { router.push('/auth/login'); return; }
     fetchChart();
-  }, [chartId, session, router]);
+  }, [chartId, session, authLoading, router]);
 
   const authHeaders = () => ({
     'Content-Type': 'application/json',
