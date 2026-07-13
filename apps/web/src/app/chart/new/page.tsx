@@ -124,11 +124,16 @@ export default function NewChartPage() {
     setError(null);
 
     try {
+      const { createClient } = await import('@/lib/supabase');
+      const supabase = createClient();
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token || session?.access_token;
+
       const res = await fetch('/api/charts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: 'include',
         body: JSON.stringify({
