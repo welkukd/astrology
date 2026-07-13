@@ -2,8 +2,11 @@ from flatlib.datetime import Datetime, Date, Time
 from flatlib.geopos import GeoPos
 from flatlib.chart import Chart
 from flatlib import const, aspects
+from flatlib.ephem import swe
 import hashlib
 import uuid
+import os
+import swisseph
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, available_timezones
 
@@ -81,6 +84,18 @@ def _generate_id(date: str, time: str, lat: float, lon: float, tz: str, zodiac: 
     return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
 
 
+_ephe_path_set = False
+
+def _ensure_ephe_path():
+    global _ephe_path_set
+    if not _ephe_path_set:
+        import flatlib
+        swefiles = os.path.join(os.path.dirname(flatlib.__file__), 'resources', 'swefiles')
+        if os.path.isdir(swefiles):
+            swe.setPath(swefiles)
+        _ephe_path_set = True
+
+
 def calculate_chart(
     date_str: str,
     time_str: str | None,
@@ -93,6 +108,7 @@ def calculate_chart(
     ayanamsa: str | None = None,
 ) -> dict:
     import sys
+    _ensure_ephe_path()
     year, month, day = map(int, date_str.split("-"))
     utc_offset = _get_utc_offset(timezone_str)
 
