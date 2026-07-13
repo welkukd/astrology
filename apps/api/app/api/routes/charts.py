@@ -12,7 +12,7 @@ router = APIRouter(prefix="/v1", tags=["charts"])
 @router.post("/natal")
 async def create_natal_chart(data: BirthData, user_id: str = Depends(get_current_user_id)):
     try:
-        print(f"Creating chart for user {user_id} with data: {data.model_dump()}")
+        print(f"Creating chart for user {user_id} with data: {data.model_dump()}", flush=True)
         chart = calculate_chart(
             date_str=data.date,
             time_str=data.time,
@@ -29,7 +29,7 @@ async def create_natal_chart(data: BirthData, user_id: str = Depends(get_current
 
         supabase = get_supabase_client()
         chart_hash = chart["chart_id"]
-        print(f"Chart calculated: {chart_hash}, planets: {len(chart.get('planets', []))}, houses: {len(chart.get('houses', []))}, aspects: {len(chart.get('aspects', []))}")
+        print(f"Chart calculated: {chart_hash}, planets: {len(chart.get('planets', []))}, houses: {len(chart.get('houses', []))}, aspects: {len(chart.get('aspects', []))}", flush=True)
 
         result = supabase.table("charts").upsert({
             "id": chart["chart_id"],
@@ -46,7 +46,7 @@ async def create_natal_chart(data: BirthData, user_id: str = Depends(get_current
             "ayanamsa": data.ayanamsa.value if data.ayanamsa else None,
             "chart_data": chart,
         }, on_conflict="user_id,chart_hash").execute()
-        print(f"Upsert result: {result}")
+        print(f"Upsert result: {result}", flush=True)
 
         return chart
 

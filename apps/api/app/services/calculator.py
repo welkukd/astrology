@@ -92,6 +92,7 @@ def calculate_chart(
     house_system: str = "Placidus",
     ayanamsa: str | None = None,
 ) -> dict:
+    import sys
     year, month, day = map(int, date_str.split("-"))
     utc_offset = _get_utc_offset(timezone_str)
 
@@ -101,6 +102,7 @@ def calculate_chart(
     else:
         h, m = map(int, time_str.split(":"))
 
+    print("CALC: creating date/time objects", flush=True)
     date = Date(f"{year}/{month:02d}/{day:02d}")
     time = Time(f"{h:02d}:{m:02d}")
     utcoffset_obj = Time(utc_offset)
@@ -108,8 +110,10 @@ def calculate_chart(
     pos = GeoPos(latitude, longitude)
     hsys = HOUSE_SYSTEM_MAP.get(house_system, const.HOUSES_PLACIDUS)
 
+    print("CALC: creating Chart", flush=True)
     chart = Chart(dt, pos, IDs=const.LIST_OBJECTS, hsys=hsys)
 
+    print("CALC: processing planets", flush=True)
     planets = []
     for pid in PLANET_ORDER:
         obj = chart.getObject(pid)
@@ -150,6 +154,7 @@ def calculate_chart(
             "modality": _modality(sign),
         })
 
+    print("CALC: processing houses", flush=True)
     houses = []
     for i, hk in enumerate(HOUSE_KEYS):
         h = chart.getHouse(hk)
@@ -161,6 +166,7 @@ def calculate_chart(
                 "degree_in_sign": round(h.lon % 30, 4),
             })
 
+    print("CALC: processing aspects", flush=True)
     aspect_list = []
     objects = [chart.getObject(pid) for pid in PLANET_ORDER if chart.getObject(pid)]
     for i, o1 in enumerate(objects):
@@ -175,6 +181,7 @@ def calculate_chart(
                     "applying": a.movement() == "Applicative",
                 })
 
+    print("CALC: generating ID", flush=True)
     chart_id = _generate_id(date_str, time_str or "unknown", latitude, longitude, timezone_str, zodiac, house_system)
 
     return {
