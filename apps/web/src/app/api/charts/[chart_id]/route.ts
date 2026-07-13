@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-8082.up.railway.app';
+const BACKEND = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('your-backend'))
+  ? process.env.NEXT_PUBLIC_API_URL
+  : 'https://astrology-api-production-8082.up.railway.app';
 
 export async function GET(request: NextRequest, { params }: any) {
   const { chart_id } = await params;
