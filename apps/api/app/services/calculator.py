@@ -2,13 +2,12 @@ from flatlib.datetime import Datetime, Date, Time
 from flatlib.geopos import GeoPos
 from flatlib.chart import Chart
 from flatlib import const, aspects
-from flatlib.ephem import swe
+from flatlib.ephem import swe as flatlib_swe
 import hashlib
-import uuid
 import os
 import swisseph
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo, available_timezones
+from zoneinfo import ZoneInfo
 
 SIGN_NAMES = [const.ARIES, const.TAURUS, const.GEMINI, const.CANCER,
               const.LEO, const.VIRGO, const.LIBRA, const.SCORPIO,
@@ -84,16 +83,45 @@ def _generate_id(date: str, time: str, lat: float, lon: float, tz: str, zodiac: 
     return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
 
 
-_ephe_path_set = False
-
-def _ensure_ephe_path():
-    global _ephe_path_set
-    if not _ephe_path_set:
+def _setup_ephemeris():
+    try:
         import flatlib
         swefiles = os.path.join(os.path.dirname(flatlib.__file__), 'resources', 'swefiles')
         if os.path.isdir(swefiles):
-            swe.setPath(swefiles)
-        _ephe_path_set = True
+            flatlib_swe.setPath(swefiles)
+    except Exception:
+        pass
+
+
+def _patch_swe_object():
+    _setup_ephemeris()
+
+    def safe_calc_ut(jd, sweObj):
+        try:
+            data, flg = swisseph.calc_ut(jd, sweObj, swisseph.FLG_SWIEPH | swisseph.FLG_SPEED)
+            return list(data) if len(data) >= 5 else list(data) + [0.0] * (5 - len(data))
+        except Exception:
+            try:
+                data, flg = swisseph.calc_ut(jd, sweObj, swisseph.FLG_SPEED)
+                return list(data) if len(data) >= 5 else list(data) + [0.0] * (5 - len(data))
+            except Exception:
+                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    def patched_sweObject(obj, jd):
+        sweObj = flatlib_swe.SWE_OBJECTS[obj]
+        data = safe_calc_ut(jd, sweObj)
+        return {
+            'id': obj,
+            'lon': data[0],
+            'lat': data[1],
+            'lonspeed': data[3],
+            'latspeed': data[4],
+        }
+
+    flatlib_swe.sweObject = patched_sweObject
+
+
+_patch_swe_object()
 
 
 def calculate_chart(
@@ -107,8 +135,6 @@ def calculate_chart(
     house_system: str = "Placidus",
     ayanamsa: str | None = None,
 ) -> dict:
-    import sys
-    _ensure_ephe_path()
     year, month, day = map(int, date_str.split("-"))
     utc_offset = _get_utc_offset(timezone_str)
 
@@ -118,7 +144,6 @@ def calculate_chart(
     else:
         h, m = map(int, time_str.split(":"))
 
-    print("CALC: creating date/time objects", flush=True)
     date = Date(f"{year}/{month:02d}/{day:02d}")
     time = Time(f"{h:02d}:{m:02d}")
     utcoffset_obj = Time(utc_offset)
@@ -126,10 +151,8 @@ def calculate_chart(
     pos = GeoPos(latitude, longitude)
     hsys = HOUSE_SYSTEM_MAP.get(house_system, const.HOUSES_PLACIDUS)
 
-    print("CALC: creating Chart", flush=True)
     chart = Chart(dt, pos, IDs=const.LIST_OBJECTS, hsys=hsys)
 
-    print("CALC: processing planets", flush=True)
     planets = []
     for pid in PLANET_ORDER:
         obj = chart.getObject(pid)
@@ -170,7 +193,6 @@ def calculate_chart(
             "modality": _modality(sign),
         })
 
-    print("CALC: processing houses", flush=True)
     houses = []
     for i, hk in enumerate(HOUSE_KEYS):
         h = chart.getHouse(hk)
@@ -182,7 +204,6 @@ def calculate_chart(
                 "degree_in_sign": round(h.lon % 30, 4),
             })
 
-    print("CALC: processing aspects", flush=True)
     aspect_list = []
     objects = [chart.getObject(pid) for pid in PLANET_ORDER if chart.getObject(pid)]
     for i, o1 in enumerate(objects):
@@ -197,7 +218,6 @@ def calculate_chart(
                     "applying": a.movement() == "Applicative",
                 })
 
-    print("CALC: generating ID", flush=True)
     chart_id = _generate_id(date_str, time_str or "unknown", latitude, longitude, timezone_str, zodiac, house_system)
 
     return {
