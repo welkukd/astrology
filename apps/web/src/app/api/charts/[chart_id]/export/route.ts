@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-8082.up.railway.app';
+
 export async function POST(request: NextRequest, { params }: any) {
   const { chart_id } = await params;
   try {
@@ -8,7 +10,7 @@ export async function POST(request: NextRequest, { params }: any) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/charts/${chart_id}/export`, {
+    const res = await fetch(`${BACKEND}/api/v1/charts/${chart_id}/export`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
