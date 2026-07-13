@@ -23,9 +23,10 @@ export default function ChartPage() {
   const [answer, setAnswer] = useState('');
 
   useEffect(() => {
-    if (!session) return;
+    if (session === undefined) return;
+    if (!session) { router.push('/auth/login'); return; }
     fetchChart();
-  }, [chartId, session]);
+  }, [chartId, session, router]);
 
   const authHeaders = () => ({
     'Content-Type': 'application/json',

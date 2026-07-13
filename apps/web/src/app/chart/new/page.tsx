@@ -93,7 +93,7 @@ export default function NewChartPage() {
     if (step === 0) {
       if (!formData.date) return 'Date of birth is required';
       if (!formData.timeUnknown && !formData.time) return 'Time of birth is required (or check "Time Unknown")';
-      if (!formData.latitude || !formData.longitude) return 'Please select a birth location';
+      if (formData.latitude === null || formData.latitude === undefined || formData.longitude === null || formData.longitude === undefined) return 'Please select a birth location';
       return null;
     }
     return null;

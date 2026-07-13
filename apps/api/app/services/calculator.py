@@ -3,7 +3,9 @@ from flatlib.geopos import GeoPos
 from flatlib.chart import Chart
 from flatlib import const, aspects
 import hashlib
+import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, available_timezones
 
 SIGN_NAMES = [const.ARIES, const.TAURUS, const.GEMINI, const.CANCER,
               const.LEO, const.VIRGO, const.LIBRA, const.SCORPIO,
@@ -34,43 +36,30 @@ MODALITIES = {
 }
 
 ASPECT_NAMES = {0: "conjunction", 30: "semisextile", 36: "quintile", 45: "semisquare",
-                  60: "sextile", 72: "biquintile", 90: "square", 108: "sesquiquintile",
-                  120: "trine", 135: "sesquisquare", 144: "quintile", 150: "quincunx", 180: "opposition"}
+                60: "sextile", 72: "biquintile", 90: "square", 108: "sesquiquintile",
+                120: "trine", 135: "sesquisquare", 144: "biquintile", 150: "quincunx", 180: "opposition"}
 
 HOUSE_SYSTEM_MAP = {
     "Placidus": const.HOUSES_PLACIDUS,
     "Koch": const.HOUSES_KOCH,
-    "Whole_Sign": const.HOUSES_WHOLE_SIGN,
+    "Whole Sign": const.HOUSES_WHOLE_SIGN,
     "Equal": const.HOUSES_EQUAL,
     "Porphyry": const.HOUSES_PORPHYRIUS,
     "Regiomontanus": const.HOUSES_REGIOMONTANUS,
     "Campanus": const.HOUSES_CAMPANUS,
     "Morinus": const.HOUSES_MORINUS,
-    "Polich_Page": const.HOUSES_POLICH_PAGE,
+    "Polich-Page": const.HOUSES_POLICH_PAGE,
     "Alcabitius": const.HOUSES_ALCABITUS,
 }
 
-TIMEZONE_OFFSETS = {
-    "America/New_York": -5, "America/Chicago": -6, "America/Denver": -7,
-    "America/Los_Angeles": -8, "America/Anchorage": -9, "Pacific/Honolulu": -10,
-    "America/Phoenix": -7, "America/Juneau": -9,
-    "Europe/London": 0, "Europe/Paris": 1, "Europe/Berlin": 1, "Europe/Madrid": 1,
-    "Europe/Moscow": 3, "Europe/Istanbul": 3, "Europe/Athens": 2, "Europe/Rome": 1,
-    "Asia/Kolkata": 5.5, "Asia/Shanghai": 8, "Asia/Tokyo": 9, "Asia/Seoul": 9,
-    "Asia/Dubai": 4, "Asia/Singapore": 8, "Asia/Hong_Kong": 8,
-    "Australia/Sydney": 11, "Australia/Melbourne": 11, "Australia/Perth": 8,
-    "Australia/Brisbane": 10,
-    "Africa/Cairo": 2, "Africa/Johannesburg": 2, "Africa/Lagos": 1,
-    "America/Sao_Paulo": -3, "America/Argentina/Buenos_Aires": -3,
-    "America/Mexico_City": -6, "America/Toronto": -5,
-    "Pacific/Auckland": 13, "Pacific/Fiji": 12,
-}
 
-
-def _get_utc_offset(timezone_str: str, date_str: str) -> float:
-    if timezone_str in TIMEZONE_OFFSETS:
-        return TIMEZONE_OFFSETS[timezone_str]
-    return 0
+def _get_utc_offset(timezone_str: str) -> float:
+    try:
+        dt_now = datetime.now(ZoneInfo(timezone_str))
+        offset_seconds = dt_now.utcoffset().total_seconds() if dt_now.utcoffset() else 0
+        return offset_seconds / 3600
+    except (KeyError, TypeError):
+        return 0
 
 
 def _sign_name(lon: float) -> str:
@@ -88,7 +77,8 @@ def _modality(sign: str) -> str:
 
 def _generate_id(date: str, time: str, lat: float, lon: float, tz: str, zodiac: str, house_system: str) -> str:
     key = f"{date}|{time}|{lat}|{lon}|{tz}|{zodiac}|{house_system}"
-    return hashlib.sha256(key.encode()).hexdigest()[:16]
+    h = hashlib.sha256(key.encode()).hexdigest()
+    return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
 
 
 def calculate_chart(
@@ -98,10 +88,12 @@ def calculate_chart(
     latitude: float,
     longitude: float,
     timezone_str: str,
+    zodiac: str = "tropical",
     house_system: str = "Placidus",
+    ayanamsa: str | None = None,
 ) -> dict:
     year, month, day = map(int, date_str.split("-"))
-    utc_offset = _get_utc_offset(timezone_str, date_str)
+    utc_offset = _get_utc_offset(timezone_str)
 
     if time_unknown or not time_str:
         h, m = 12, 0
@@ -143,6 +135,8 @@ def calculate_chart(
                     house_num = i + 1
                     break
 
+        retrograde = getattr(obj, 'lonspeed', 0) < 0 if hasattr(obj, 'lonspeed') else False
+
         planets.append({
             "name": obj.id,
             "longitude": round(obj.lon, 4),
@@ -151,7 +145,7 @@ def calculate_chart(
             "sign": sign,
             "degree_in_sign": round(degree_in_sign, 4),
             "house": house_num,
-            "retrograde": getattr(obj, 'retrograde', False),
+            "retrograde": retrograde,
             "element": _element(sign),
             "modality": _modality(sign),
         })
@@ -181,7 +175,7 @@ def calculate_chart(
                     "applying": a.movement() == "Applicative",
                 })
 
-    chart_id = _generate_id(date_str, time_str or "unknown", latitude, longitude, timezone_str, "tropical", house_system)
+    chart_id = _generate_id(date_str, time_str or "unknown", latitude, longitude, timezone_str, zodiac, house_system)
 
     return {
         "chart_id": chart_id,
@@ -193,8 +187,9 @@ def calculate_chart(
             "latitude": latitude,
             "longitude": longitude,
             "timezone": timezone_str,
-            "zodiac": "tropical",
+            "zodiac": zodiac,
             "house_system": house_system,
+            "ayanamsa": ayanamsa,
         },
         "planets": planets,
         "houses": houses,

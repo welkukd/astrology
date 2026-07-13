@@ -19,7 +19,9 @@ async def create_natal_chart(data: BirthData, user_id: str = Depends(get_current
             latitude=data.latitude,
             longitude=data.longitude,
             timezone_str=data.timezone,
-            house_system=data.house_system.value.replace(" ", "_"),
+            zodiac=data.zodiac.value,
+            house_system=data.house_system.value,
+            ayanamsa=data.ayanamsa.value if data.ayanamsa else None,
         )
 
         chart["subject"]["name"] = data.name

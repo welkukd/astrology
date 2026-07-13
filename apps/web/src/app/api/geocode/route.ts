@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const apiKey = process.env.GEOAPIFY_KEY;
     const url = apiKey
       ? `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(q)}&limit=10&apiKey=${apiKey}`
-      : `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=10&addressdetails=1`;
+      : `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=10&addressdetails=1&extratags=1`;
     
     const res = await fetch(url, {
       headers: apiKey ? {} : { 'User-Agent': 'AstrologyApp/1.0' },
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         display_name: r.display_name,
         lat: parseFloat(r.lat),
         lon: parseFloat(r.lon),
-        timezone: 'UTC',
+        timezone: r.extratags?.timezone || 'UTC',
       }));
     }
     
