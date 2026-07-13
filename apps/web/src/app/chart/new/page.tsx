@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Moon, Loader2, MapPin, Clock, Calendar, AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
+import { useAuth } from '@/app/providers';
 
 const ZODIAC_OPTIONS = [
   { value: 'tropical', label: 'Western (Tropical)', description: 'Sun-based, seasonal' },
@@ -27,6 +28,7 @@ const STEPS = [
 
 export default function NewChartPage() {
   const router = useRouter();
+  const { session } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +126,10 @@ export default function NewChartPage() {
     try {
       const res = await fetch('/api/charts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         credentials: 'include',
         body: JSON.stringify({
           name: formData.name,

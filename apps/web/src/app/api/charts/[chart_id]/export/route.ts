@@ -5,16 +5,26 @@ const BACKEND = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API
   ? process.env.NEXT_PUBLIC_API_URL
   : 'https://astrology-api-production-8082.up.railway.app';
 
-export async function POST(request: NextRequest, { params }: any) {
-  const { chart_id } = await params;
+async function getAccessToken(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7);
   try {
     const supabase = await createServerSupabase();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (session) return session.access_token;
+  } catch {}
+  return null;
+}
+
+export async function POST(request: NextRequest, { params }: any) {
+  const { chart_id } = await params;
+  try {
+    const token = await getAccessToken(request);
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const res = await fetch(`${BACKEND}/api/v1/charts/${chart_id}/export`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return NextResponse.json({ error: 'Export failed' }, { status: 500 });
     return NextResponse.json(await res.json());

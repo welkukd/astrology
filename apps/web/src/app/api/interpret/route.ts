@@ -5,16 +5,26 @@ const BACKEND = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API
   ? process.env.NEXT_PUBLIC_API_URL
   : 'https://astrology-api-production-8082.up.railway.app';
 
-export async function POST(request: NextRequest) {
+async function getAccessToken(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7);
   try {
     const supabase = await createServerSupabase();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (session) return session.access_token;
+  } catch {}
+  return null;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const token = await getAccessToken(request);
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
     const res = await fetch(`${BACKEND}/api/v1/interpret`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     });
 
