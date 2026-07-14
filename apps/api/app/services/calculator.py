@@ -37,6 +37,30 @@ MODALITIES = {
     const.GEMINI: "Mutable", const.VIRGO: "Mutable", const.SAGITTARIUS: "Mutable", const.PISCES: "Mutable",
 }
 
+NAKSHATRAS = [
+    "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
+    "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni",
+    "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha",
+    "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha",
+    "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada",
+    "Uttara Bhadrapada", "Revati",
+]
+
+NAKSHATRA_LORDS = {
+    "Ashwini": "Ketu", "Bharani": "Venus", "Krittika": "Sun",
+    "Rohini": "Moon", "Mrigashira": "Mars", "Ardra": "Rahu",
+    "Punarvasu": "Jupiter", "Pushya": "Saturn", "Ashlesha": "Mercury",
+    "Magha": "Ketu", "Purva Phalguni": "Venus", "Uttara Phalguni": "Sun",
+    "Hasta": "Moon", "Chitra": "Mars", "Swati": "Rahu",
+    "Vishakha": "Jupiter", "Anuradha": "Saturn", "Jyeshtha": "Mercury",
+    "Mula": "Ketu", "Purva Ashadha": "Venus", "Uttara Ashadha": "Sun",
+    "Shravana": "Moon", "Dhanishta": "Mars", "Shatabhisha": "Rahu",
+    "Purva Bhadrapada": "Jupiter", "Uttara Bhadrapada": "Saturn",
+    "Revati": "Mercury",
+}
+
+NAKSHATRA_SPAN = 13 + 20 / 60  # 13°20' = 13.3333...
+
 ASPECT_NAMES = {0: "conjunction", 30: "semisextile", 36: "quintile", 45: "semisquare",
                 60: "sextile", 72: "biquintile", 90: "square", 108: "sesquiquintile",
                 120: "trine", 135: "sesquisquare", 144: "biquintile", 150: "quincunx", 180: "opposition"}
@@ -75,6 +99,17 @@ def _element(sign: str) -> str:
 
 def _modality(sign: str) -> str:
     return MODALITIES.get(sign, "")
+
+
+def _nakshatra(lon: float) -> tuple[str, int, str]:
+    """Returns (nakshatra_name, pada, nakshatra_lord) for a given longitude."""
+    idx = int((lon % 360) / NAKSHATRA_SPAN) % 27
+    name = NAKSHATRAS[idx]
+    start_lon = idx * NAKSHATRA_SPAN
+    offset = (lon % 360) - start_lon
+    pada = int(offset / (NAKSHATRA_SPAN / 4)) + 1
+    lord = NAKSHATRA_LORDS[name]
+    return name, pada, lord
 
 
 def _generate_id(date: str, time: str, lat: float, lon: float, tz: str, zodiac: str, house_system: str) -> str:
@@ -205,6 +240,9 @@ def calculate_chart(
             "retrograde": retrograde,
             "element": _element(sign),
             "modality": _modality(sign),
+            "nakshatra": _nakshatra(obj.lon)[0],
+            "nakshatra_pada": _nakshatra(obj.lon)[1],
+            "nakshatra_lord": _nakshatra(obj.lon)[2],
         })
 
     houses = []
@@ -257,5 +295,12 @@ def calculate_chart(
             "ephemeris": "Moshier / Swiss Ephemeris",
             "precision_note": "0.001 arcseconds (Swiss Eph) / 0.1 arcsec (Moshier)",
             "source": "self-hosted flatlib",
+        },
+        "vedic": {
+            "moon_nakshatra": _nakshatra(chart.getObject(const.MOON).lon)[0] if chart.getObject(const.MOON) else "Unknown",
+            "moon_nakshatra_pada": _nakshatra(chart.getObject(const.MOON).lon)[1] if chart.getObject(const.MOON) else 0,
+            "moon_nakshatra_lord": _nakshatra(chart.getObject(const.MOON).lon)[2] if chart.getObject(const.MOON) else "Unknown",
+            "birth_star": _nakshatra(chart.getObject(const.MOON).lon)[0] if chart.getObject(const.MOON) else "Unknown",
+            "birth_nakshatra_lord": _nakshatra(chart.getObject(const.MOON).lon)[2] if chart.getObject(const.MOON) else "Unknown",
         },
     }

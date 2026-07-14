@@ -79,6 +79,7 @@ export default function ReadingPage() {
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('full');
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -94,6 +95,12 @@ export default function ReadingPage() {
     fetchChart();
   }, [chartId, session, authLoading, router]);
 
+  useEffect(() => {
+    if (chart && !fullReading && !generating) {
+      generateReading('full');
+    }
+  }, [chart]);
+
   const fetchChart = async () => {
     try {
       const res = await fetch(`/api/charts/${chartId}`, { headers: authHeaders() });
@@ -104,20 +111,27 @@ export default function ReadingPage() {
   };
 
   const generateReading = async (type: string, params: any = {}) => {
-    setGenerating(type);
+    const key = type === 'yearly' ? `yearly_${params.year}` : type;
+    setGenerating(key);
+    setError(null);
     try {
       const body = { reading_type: type, chart_id: chartId, ...params };
       const res = await fetch('/api/reading', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || errData.error || `Server error ${res.status}`);
+      }
       const data = await res.json();
+      if (!data.content) throw new Error('No reading content returned');
 
       if (type === 'full') setFullReading(data.content);
       else if (type === 'yearly') setYearlyReadings(prev => ({ ...prev, [params.year]: data.content }));
       else if (type === 'monthly') setMonthlyReading(data.content);
       else if (type === 'dasha') { setDashaReading(data.content); if (data.dasha_data) setDashaData(data.dasha_data); }
       else if (type === 'transits') setTransitsReading(data.content);
-    } catch { /* */ }
-    finally { setGenerating(null); }
+    } catch (e: any) {
+      setError(e.message || 'Failed to generate reading. Please try again.');
+    } finally { setGenerating(null); }
   };
 
   const tabs = [
@@ -165,6 +179,61 @@ export default function ReadingPage() {
           </p>
         </div>
 
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3">
+            <Zap className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-700 dark:text-red-300 flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 dark:hover:text-red-300 text-sm font-medium">Dismiss</button>
+          </div>
+        )}
+
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-8">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Star className="h-5 w-5 text-primary-600" />
+              Planetary Positions
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-800">
+                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Planet</th>
+                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Sign</th>
+                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Degree</th>
+                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">House</th>
+                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Nakshatra</th>
+                </tr>
+              </thead>
+              <tbody>
+                {planets.map((p: any) => (
+                  <tr key={p.name} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getPlanetEmoji(p.name)}</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{p.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <span>{getSignEmoji(p.sign)}</span>
+                        <span className="text-gray-700 dark:text-gray-300">{p.sign}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{p.degree_in_sign?.toFixed(2)}°</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded">
+                        {p.house || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.nakshatra || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="grid lg:grid-cols-4 gap-8">
           <aside className="lg:col-span-1 space-y-4">
             {tabs.map(tab => (
@@ -197,7 +266,13 @@ export default function ReadingPage() {
           <main className="lg:col-span-3 space-y-6">
             {activeTab === 'full' && (
               <div className="space-y-4">
-                {fullReading ? (
+                {generating === 'full' && !fullReading ? (
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+                    <Loader2 className="h-12 w-12 text-primary-600 mx-auto mb-4 animate-spin" />
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Generating Your Reading...</h2>
+                    <p className="text-gray-500 dark:text-gray-400">AI is analyzing your birth chart. This takes 10-20 seconds.</p>
+                  </div>
+                ) : fullReading ? (
                   parseReading(fullReading).map((section, i) => (
                     <ReadingSectionCard key={i} section={section} />
                   ))
