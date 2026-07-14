@@ -155,7 +155,7 @@ export default function NewChartPage() {
       }
 
       const data = await res.json();
-      router.push(`/chart/${data.chart_id}`);
+      router.push(`/chart/${data.chart_id}/read`);
       router.refresh();
     } catch (err: any) {
       setError(err.message || 'Something went wrong');

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
-import { Moon, Star, Sparkles, Download, Share2, Loader2, MessageSquare } from 'lucide-react';
+import { Moon, Star, Sparkles, Download, Share2, Loader2, MessageSquare, BookOpen } from 'lucide-react';
 import { cn, formatDate, getSignEmoji, getPlanetEmoji } from '@/lib/utils';
 import { ChartWheel } from '@/components/chart/ChartWheel';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
@@ -116,6 +116,10 @@ export default function ChartPage() {
               <span className="font-medium text-gray-900 dark:text-white truncate max-w-xs">{subject.name || 'My Chart'}</span>
             </div>
             <div className="flex items-center gap-2">
+              <Link href={`/chart/${chartId}/read`} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
+                <BookOpen className="h-4 w-4" />
+                Get Reading
+              </Link>
               <button onClick={handleExport} className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Export JSON"><Download className="h-5 w-5" /></button>
               <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Share"><Share2 className="h-5 w-5" /></button>
             </div>

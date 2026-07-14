@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.core.config import get_settings
-from app.api.routes import charts, ai
+from app.api.routes import charts, ai, readings
 
 settings = get_settings()
 
@@ -31,6 +31,7 @@ app.add_middleware(
 
 app.include_router(charts.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
+app.include_router(readings.router, prefix="/api")
 
 
 @app.get("/health")
