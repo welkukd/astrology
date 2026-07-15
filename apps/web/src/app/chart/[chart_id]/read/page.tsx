@@ -4,44 +4,25 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
-import { Moon, Star, Sparkles, Calendar, Clock, ArrowLeft, Loader2, ChevronDown, ChevronRight, Zap, Heart, Brain, Sun, TrendingUp, MessageSquare } from 'lucide-react';
-import { cn, formatDate, getSignEmoji, getPlanetEmoji } from '@/lib/utils';
+import { Moon, Star, Sparkles, Calendar, Clock, ArrowLeft, Loader2, ChevronDown, ChevronRight, Zap, Heart, Brain, Sun, TrendingUp, MessageSquare, BookOpen } from 'lucide-react';
+import { cn, getSignEmoji, getPlanetEmoji } from '@/lib/utils';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
+import { getFullReading, getYearlyReading, getDashaReading, getPlanetInSign, getPlanetInHouse, getAspectInterpretation, type ReadingSection } from '@/lib/interpretations';
 
-type ReadingSection = {
-  title: string;
-  content: string;
-  icon: any;
+const SECTION_ICONS: Record<string, any> = {
+  overview: Sparkles, personality: Brain, career: TrendingUp, love: Heart,
+  money: Sun, health: Moon, spirituality: Star, challenges: Zap,
+  strengths: Sparkles, advice: MessageSquare, theme: Calendar,
+  'key dates': Calendar, best: Calendar, opportunities: Sparkles,
+  timing: Clock, guidance: MessageSquare, transition: Clock,
+  'life chapters': Clock, 'planetary periods': Star, 'current period': Clock,
+  'major transits': Zap,   'what to expect': Star,
 };
 
-function parseReading(text: string): ReadingSection[] {
-  const sections: ReadingSection[] = [];
-  const parts = text.split(/^### /m).filter(Boolean);
-  const icons: Record<string, any> = {
-    'overview': Sparkles, 'personality': Brain, 'career': TrendingUp,
-    'love': Heart, 'money': Sun, 'health': Moon, 'spirituality': Star,
-    'challenges': Zap, 'strengths': Sparkles, 'theme': Calendar,
-    'advice': MessageSquare, 'key': Calendar, 'best': Calendar,
-    'opportunities': Sparkles, 'timing': Clock, 'guidance': MessageSquare,
-    'transition': Clock, 'active': Zap, 'what': Star, 'major': Zap,
-    'current': Clock, 'life': Star, 'period': Clock, 'sub': Clock,
-  };
-
-  for (const part of parts) {
-    const lines = part.split('\n');
-    const title = lines[0].trim();
-    const content = lines.slice(1).join('\n').trim();
-    if (!content) continue;
-    const key = title.toLowerCase().split(' ')[0];
-    const icon = icons[key] || Sparkles;
-    sections.push({ title, content, icon });
-  }
-  return sections;
-}
-
-function ReadingSectionCard({ section }: { section: ReadingSection }) {
+function SectionCard({ section }: { section: ReadingSection }) {
   const [expanded, setExpanded] = useState(true);
-  const Icon = section.icon;
+  const key = section.title.toLowerCase().split(' ')[0];
+  const Icon = SECTION_ICONS[key] || Sparkles;
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
       <button onClick={() => setExpanded(!expanded)}
@@ -54,7 +35,7 @@ function ReadingSectionCard({ section }: { section: ReadingSection }) {
       </button>
       {expanded && (
         <div className="px-5 pb-5 pt-0">
-          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-gray-600 dark:text-gray-300 leading-relaxed">
+          <div className="whitespace-pre-wrap text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
             {section.content}
           </div>
         </div>
@@ -70,16 +51,7 @@ export default function ReadingPage() {
   const { session, loading: authLoading } = useAuth();
 
   const [chart, setChart] = useState<any>(null);
-  const [fullReading, setFullReading] = useState<string | null>(null);
-  const [yearlyReadings, setYearlyReadings] = useState<Record<number, string | null>>({});
-  const [monthlyReading, setMonthlyReading] = useState<string | null>(null);
-  const [dashaReading, setDashaReading] = useState<string | null>(null);
-  const [dashaData, setDashaData] = useState<any>(null);
-  const [transitsReading, setTransitsReading] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('full');
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -95,12 +67,6 @@ export default function ReadingPage() {
     fetchChart();
   }, [chartId, session, authLoading, router]);
 
-  useEffect(() => {
-    if (chart && !fullReading && !generating) {
-      generateReading('full');
-    }
-  }, [chart]);
-
   const fetchChart = async () => {
     try {
       const res = await fetch(`/api/charts/${chartId}`, { headers: authHeaders() });
@@ -110,48 +76,30 @@ export default function ReadingPage() {
     finally { setLoading(false); }
   };
 
-  const generateReading = async (type: string, params: any = {}) => {
-    const key = type === 'yearly' ? `yearly_${params.year}` : type;
-    setGenerating(key);
-    setError(null);
-    try {
-      const body = { reading_type: type, chart_id: chartId, ...params };
-      const res = await fetch('/api/reading', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || errData.error || `Server error ${res.status}`);
-      }
-      const data = await res.json();
-      if (!data.content) throw new Error('No reading content returned');
-
-      if (type === 'full') setFullReading(data.content);
-      else if (type === 'yearly') setYearlyReadings(prev => ({ ...prev, [params.year]: data.content }));
-      else if (type === 'monthly') setMonthlyReading(data.content);
-      else if (type === 'dasha') { setDashaReading(data.content); if (data.dasha_data) setDashaData(data.dasha_data); }
-      else if (type === 'transits') setTransitsReading(data.content);
-    } catch (e: any) {
-      setError(e.message || 'Failed to generate reading. Please try again.');
-    } finally { setGenerating(null); }
-  };
-
-  const tabs = [
-    { id: 'full', label: 'Full Reading', icon: Sparkles },
-    { id: 'yearly', label: 'Yearly', icon: Calendar },
-    { id: 'monthly', label: 'Monthly', icon: Calendar },
-    { id: 'dasha', label: 'Life Chapters', icon: Clock },
-    { id: 'transits', label: 'Transits', icon: Zap },
-  ];
-
   if (loading || authLoading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary-600" /></div>;
   }
   if (!chart) return null;
 
   const planets = chart.planets || [];
+  const houses = chart.houses || [];
+  const aspects = chart.aspects || [];
+  const subject = chart.subject || {};
   const sunSign = planets.find((p: any) => p.name === 'Sun')?.sign;
   const moonSign = planets.find((p: any) => p.name === 'Moon')?.sign;
-  const risingSign = (chart.houses || [])[0]?.sign;
-  const subject = chart.subject || {};
+  const risingSign = houses[0]?.sign;
+
+  const fullReading = getFullReading(chart);
+  const yearlyReading = getYearlyReading(chart, selectedYear);
+  const dashaReading = getDashaReading(chart);
+
+  const tabs = [
+    { id: 'full', label: 'Full Reading', icon: Sparkles },
+    { id: 'planets', label: 'Planets', icon: Star },
+    { id: 'yearly', label: 'Yearly', icon: Calendar },
+    { id: 'dasha', label: 'Life Chapters', icon: Clock },
+    { id: 'transits', label: 'Transits', icon: Zap },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -167,6 +115,9 @@ export default function ReadingPage() {
               <span className="text-gray-400">/</span>
               <span className="font-medium text-gray-900 dark:text-white">Reading</span>
             </div>
+            <Link href="/chart/new" className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
+              <Moon className="h-4 w-4" /> New Chart
+            </Link>
           </div>
         </div>
       </nav>
@@ -177,61 +128,6 @@ export default function ReadingPage() {
           <p className="text-gray-500 dark:text-gray-400 mt-2">
             {subject.date} {subject.time && subject.time !== '12:00' ? `at ${subject.time?.slice(0,5)}` : ''} • {sunSign && `${sunSign} Sun`} {moonSign && `• ${moonSign} Moon`} {risingSign && `• ${risingSign} Rising`}
           </p>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3">
-            <Zap className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <p className="text-sm text-red-700 dark:text-red-300 flex-1">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 dark:hover:text-red-300 text-sm font-medium">Dismiss</button>
-          </div>
-        )}
-
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-8">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary-600" />
-              Planetary Positions
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Planet</th>
-                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Sign</th>
-                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Degree</th>
-                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">House</th>
-                  <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">Nakshatra</th>
-                </tr>
-              </thead>
-              <tbody>
-                {planets.map((p: any) => (
-                  <tr key={p.name} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{getPlanetEmoji(p.name)}</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <span>{getSignEmoji(p.sign)}</span>
-                        <span className="text-gray-700 dark:text-gray-300">{p.sign}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{p.degree_in_sign?.toFixed(2)}°</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded">
-                        {p.house || '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.nakshatra || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
@@ -261,35 +157,72 @@ export default function ReadingPage() {
                 </div>
               ))}
             </div>
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Planets</h3>
+              <div className="space-y-2">
+                {planets.slice(0, 10).map((p: any) => (
+                  <div key={p.name} className="flex items-center gap-2 text-sm">
+                    <span>{getPlanetEmoji(p.name)}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{p.name}</span>
+                    <span className="text-gray-400 ml-auto">{p.sign}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </aside>
 
           <main className="lg:col-span-3 space-y-6">
             {activeTab === 'full' && (
               <div className="space-y-4">
-                {generating === 'full' && !fullReading ? (
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-                    <Loader2 className="h-12 w-12 text-primary-600 mx-auto mb-4 animate-spin" />
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Generating Your Reading...</h2>
-                    <p className="text-gray-500 dark:text-gray-400">AI is analyzing your birth chart. This takes 10-20 seconds.</p>
-                  </div>
-                ) : fullReading ? (
-                  parseReading(fullReading).map((section, i) => (
-                    <ReadingSectionCard key={i} section={section} />
-                  ))
-                ) : (
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-                    <Sparkles className="h-12 w-12 text-primary-600 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Get Your Complete Reading</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      Our AI will analyze your birth chart and generate a comprehensive reading covering personality, career, love, money, health, and more.
-                    </p>
-                    <button onClick={() => generateReading('full')} disabled={generating === 'full'}
-                      className="px-8 py-4 bg-primary-600 text-white rounded-xl text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/25 disabled:opacity-50 flex items-center gap-2 mx-auto">
-                      {generating === 'full' ? <><Loader2 className="h-5 w-5 animate-spin" /> Generating...</> : <><Sparkles className="h-5 w-5" /> Generate Full Reading</>}
-                    </button>
-                    <p className="text-xs text-gray-400 mt-4">Takes 10-20 seconds. Uses AI to interpret your chart data.</p>
-                  </div>
-                )}
+                {fullReading.map((section, i) => (
+                  <SectionCard key={i} section={section} />
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'planets' && (
+              <div className="space-y-4">
+                {planets.map((p: any) => {
+                  const signText = getPlanetInSign(p.name, p.sign);
+                  const houseText = getPlanetInHouse(p.name, p.house);
+                  return (
+                    <div key={p.name} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                      <div className="p-5 border-b border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{getPlanetEmoji(p.name)}</span>
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white text-lg">{p.name}</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                              <span>{getSignEmoji(p.sign)}</span>
+                              <span>{p.sign} {p.degree_in_sign?.toFixed(1)}°</span>
+                              {p.house && <><span>•</span><span>House {p.house}</span></>}
+                              {p.retrograde && <span className="text-orange-500">(R)</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">In {p.sign}</h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{signText}</p>
+                        </div>
+                        {p.house && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">In House {p.house}</h4>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{houseText}</p>
+                          </div>
+                        )}
+                        {p.nakshatra && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Nakshatra: {p.nakshatra} Pada {p.nakshatra_pada}</h4>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Ruled by {p.nakshatra_lord}. This Nakshatra adds {p.nakshatra_lord === 'Sun' ? 'leadership and vitality' : p.nakshatra_lord === 'Moon' ? 'emotional depth and intuition' : p.nakshatra_lord === 'Mars' ? 'courage and drive' : p.nakshatra_lord === 'Mercury' ? 'intellect and communication' : p.nakshatra_lord === 'Jupiter' ? 'wisdom and expansion' : p.nakshatra_lord === 'Venus' ? 'beauty and harmony' : p.nakshatra_lord === 'Saturn' ? 'discipline and structure' : p.nakshatra_lord === 'Rahu' ? 'ambition and unconventional energy' : 'transformation and spiritual depth'} to the {p.name} placement.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -304,118 +237,50 @@ export default function ReadingPage() {
                     </button>
                   ))}
                 </div>
-
-                {yearlyReadings[selectedYear] ? (
-                  parseReading(yearlyReadings[selectedYear]!).map((section, i) => (
-                    <ReadingSectionCard key={i} section={section} />
-                  ))
-                ) : (
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-                    <Calendar className="h-12 w-12 text-primary-600 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{selectedYear} Yearly Prediction</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">Get your personalized {selectedYear} horoscope based on your birth chart.</p>
-                    <button onClick={() => generateReading('yearly', { year: selectedYear })} disabled={generating === `yearly_${selectedYear}`}
-                      className="px-8 py-4 bg-primary-600 text-white rounded-xl text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/25 disabled:opacity-50 flex items-center gap-2 mx-auto">
-                      {generating === `yearly_${selectedYear}` ? <><Loader2 className="h-5 w-5 animate-spin" /> Generating...</> : <><Calendar className="h-5 w-5" /> Get {selectedYear} Prediction</>}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'monthly' && (
-              <div className="space-y-6">
-                <div className="flex gap-2 flex-wrap">
-                  {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
-                    <button key={i} onClick={() => setSelectedMonth(i + 1)}
-                      className={cn('px-3 py-2 rounded-lg font-medium text-sm transition-colors',
-                        selectedMonth === i + 1 ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700')}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-
-                {monthlyReading ? (
-                  parseReading(monthlyReading).map((section, i) => (
-                    <ReadingSectionCard key={i} section={section} />
-                  ))
-                ) : (
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-                    <Calendar className="h-12 w-12 text-primary-600 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Monthly Forecast</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">Get your {['','January','February','March','April','May','June','July','August','September','October','November','December'][selectedMonth]} {selectedYear} reading.</p>
-                    <button onClick={() => generateReading('monthly', { year: selectedYear, month: selectedMonth })} disabled={generating === 'monthly'}
-                      className="px-8 py-4 bg-primary-600 text-white rounded-xl text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/25 disabled:opacity-50 flex items-center gap-2 mx-auto">
-                      {generating === 'monthly' ? <><Loader2 className="h-5 w-5 animate-spin" /> Generating...</> : <><Calendar className="h-5 w-5" /> Get Monthly Forecast</>}
-                    </button>
-                  </div>
-                )}
+                {yearlyReading.map((section, i) => (
+                  <SectionCard key={i} section={section} />
+                ))}
               </div>
             )}
 
             {activeTab === 'dasha' && (
-              <div className="space-y-6">
-                {dashaReading ? (
-                  <>
-                    {dashaData && (
-                      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Life Chapters Timeline</h3>
-                        <div className="space-y-2">
-                          {(dashaData.mahadashas || []).map((md: any, i: number) => {
-                            const isActive = md.planet === dashaData.current_mahadasha;
-                            return (
-                              <div key={i} className={cn('flex items-center gap-3 p-3 rounded-lg', isActive ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800' : 'bg-gray-50 dark:bg-gray-800')}>
-                                <span className="text-lg">{getPlanetEmoji(md.planet)}</span>
-                                <div className="flex-1">
-                                  <p className={cn('font-medium', isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white')}>{md.planet} Mahadasha</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{md.start_date} → {md.end_date}</p>
-                                </div>
-                                {isActive && <span className="px-2 py-1 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full font-medium">Current</span>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    {parseReading(dashaReading).map((section, i) => (
-                      <ReadingSectionCard key={i} section={section} />
-                    ))}
-                  </>
-                ) : (
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-                    <Clock className="h-12 w-12 text-primary-600 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Life Chapters (Vimshottari Dasha)</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      Discover the planetary periods that shape your life trajectory. See which Mahadasha you're in and what it means.
-                    </p>
-                    <button onClick={() => generateReading('dasha')} disabled={generating === 'dasha'}
-                      className="px-8 py-4 bg-primary-600 text-white rounded-xl text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/25 disabled:opacity-50 flex items-center gap-2 mx-auto">
-                      {generating === 'dasha' ? <><Loader2 className="h-5 w-5 animate-spin" /> Generating...</> : <><Clock className="h-5 w-5" /> Calculate Life Chapters</>}
-                    </button>
-                  </div>
-                )}
+              <div className="space-y-4">
+                {dashaReading.map((section, i) => (
+                  <SectionCard key={i} section={section} />
+                ))}
               </div>
             )}
 
             {activeTab === 'transits' && (
-              <div className="space-y-6">
-                {transitsReading ? (
-                  parseReading(transitsReading).map((section, i) => (
-                    <ReadingSectionCard key={i} section={section} />
-                  ))
-                ) : (
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-                    <Zap className="h-12 w-12 text-primary-600 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Current Transits</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      See how current planetary positions are affecting your birth chart right now. What opportunities and challenges are in the sky?
+              <div className="space-y-4">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Current Planetary Transits</h2>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                    Today is {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Transits show how current planetary positions interact with your birth chart. The most significant transits involve outer planets (Saturn, Jupiter, Uranus, Neptune, Pluto) moving through the zodiac and forming aspects to your natal planets.
+                  </p>
+                </div>
+
+                {aspects.filter((a: any) => ['square', 'opposition', 'trine', 'conjunction'].includes(a.aspect)).map((a: any, i: number) => (
+                  <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-xl">{getPlanetEmoji(a.planet1)}</span>
+                      <span className={cn('px-3 py-1 rounded-full text-sm font-medium',
+                        a.aspect === 'conjunction' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
+                        a.aspect === 'opposition' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                        a.aspect === 'trine' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                        'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                      )}>{a.aspect}</span>
+                      <span className="text-xl">{getPlanetEmoji(a.planet2)}</span>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {getAspectInterpretation(a.planet1, a.planet2, a.aspect)}
                     </p>
-                    <button onClick={() => generateReading('transits')} disabled={generating === 'transits'}
-                      className="px-8 py-4 bg-primary-600 text-white rounded-xl text-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/25 disabled:opacity-50 flex items-center gap-2 mx-auto">
-                      {generating === 'transits' ? <><Loader2 className="h-5 w-5 animate-spin" /> Generating...</> : <><Zap className="h-5 w-5" /> Get Transit Reading</>}
-                    </button>
+                    <p className="text-xs text-gray-400 mt-2">Orb: {a.orb}° {a.applying ? '(Applying)' : '(Separating)'}</p>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </main>
