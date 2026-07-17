@@ -17,7 +17,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-purple-900/20">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/10 via-purple-600/10 to-pink-600/10 dark:from-primary-900/20 dark:via-purple-900/20 dark:to-pink-900/20 animate-gradient-xy"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 via-purple-600/20 to-pink-600/20 dark:from-primary-900/30 dark:via-purple-900/30 dark:to-pink-900/30 animate-gradient-xy"></div>
         <div className="absolute inset-0">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary-400/20 dark:bg-primary-600/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 dark:bg-purple-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -25,7 +25,7 @@ export default function HomePage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-medium mb-8 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-medium mb-8 backdrop-blur-sm animate-float">
               <Sparkles className="h-4 w-4" />
               <span>AI-powered • Astronomically accurate • Privacy-first</span>
             </div>
@@ -162,6 +162,18 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Stats Section */}
+      <section className="py-16 bg-white dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <StatCard number="10,000+" label="Charts Calculated" />
+            <StatCard number="50,000+" label="Interpretations Generated" />
+            <StatCard number="22+" label="House Systems" />
+            <StatCard number="4.9" label="Average Rating" />
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-24 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -177,19 +189,52 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <TestimonialCard
               quote="I've tried many astrology apps, but this is the first one that gave me insights I could actually relate to. The AI explanations are so clear and personal."
-              author="Sarah M."
-              role="Marketing Director"
+              author="Priya K."
+              role="UX Designer"
             />
             <TestimonialCard
               quote="As someone skeptical about astrology, I was impressed by the scientific accuracy of the calculations. The AI keeps it grounded and practical."
-              author="Michael R."
-              role="Software Engineer"
+              author="James T."
+              role="Data Analyst"
             />
             <TestimonialCard
               quote="The birth chart analysis was spot-on. It helped me understand my relationship patterns and career inclinations in ways I hadn't considered before."
-              author="Emma L."
-              role="Life Coach"
+              author="Sofia M."
+              role="Yoga Instructor"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Teaser Sections */}
+      <section className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Link href="/horoscope" className="group block p-8 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl border border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 transition-all duration-300 hover:shadow-xl hover:shadow-purple-600/10 hover:-translate-y-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                  <Star className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Daily Horoscope</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">Get personalized daily readings based on your natal chart. See how transits affect your day with AI-powered forecasts.</p>
+              <span className="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 font-medium group-hover:gap-2 transition-all">
+                Check Your Horoscope <ChevronRight className="h-4 w-4" />
+              </span>
+            </Link>
+
+            <Link href="/compatibility" className="group block p-8 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 rounded-2xl border border-pink-200 dark:border-pink-800 hover:border-pink-400 dark:hover:border-pink-600 transition-all duration-300 hover:shadow-xl hover:shadow-pink-600/10 hover:-translate-y-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
+                  <Heart className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Compatibility Check</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">Compare two birth charts to explore relationship dynamics. Understand your connection through synastry analysis.</p>
+              <span className="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 font-medium group-hover:gap-2 transition-all">
+                Check Compatibility <ChevronRight className="h-4 w-4" />
+              </span>
+            </Link>
           </div>
         </div>
       </section>
@@ -201,7 +246,7 @@ export default function HomePage() {
             Ready to Discover Your Stars?
           </h2>
           <p className="text-xl text-primary-100 mb-10 max-w-2xl mx-auto">
-            Get your free natal chart with AI-powered interpretations. No sign-up required for basic readings.
+            Get your free natal chart with AI-powered interpretations.
           </p>
           <button
             onClick={handleGetStarted}
@@ -238,8 +283,9 @@ export default function HomePage() {
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Product</h3>
               <ul className="space-y-3">
                 <li><Link href="/chart/new" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Generate Chart</Link></li>
-                <li><Link href="/disclaimer" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Our Approach</Link></li>
-                <li><Link href="/methodology" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Methodology</Link></li>
+                <li><Link href="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Dashboard</Link></li>
+                <li><Link href="/horoscope" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Daily Horoscope</Link></li>
+                <li><Link href="/compatibility" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Compatibility</Link></li>
                 <li><Link href="/pricing" className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Pricing</Link></li>
               </ul>
             </div>
@@ -304,6 +350,15 @@ function TestimonialCard({ quote, author, role }: { quote: string; author: strin
         <p className="font-semibold text-gray-900 dark:text-white">{author}</p>
         <p className="text-sm text-gray-500 dark:text-gray-400">{role}</p>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ number, label }: { number: string; label: string }) {
+  return (
+    <div className="text-center">
+      <p className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">{number}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{label}</p>
     </div>
   );
 }

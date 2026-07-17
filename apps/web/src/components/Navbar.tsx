@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Moon, Star, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { Moon, Star, LayoutDashboard, LogOut, Menu, X, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/app/providers';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,7 @@ export function Navbar() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-2">
+            {navLink('/horoscope', 'Horoscope', <BookOpen className="h-4 w-4" />)}
             {session && (
               <>
                 {navLink('/dashboard', 'Dashboard', <LayoutDashboard className="h-4 w-4" />)}
@@ -98,6 +99,7 @@ export function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
+          {navLink('/horoscope', 'Horoscope', <BookOpen className="h-4 w-4" />)}
           {session && (
             <>
               {navLink('/dashboard', 'Dashboard', <LayoutDashboard className="h-4 w-4" />)}
