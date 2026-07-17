@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
-import { Moon, Star, Sparkles, Download, Share2, Loader2, MessageSquare, BookOpen } from 'lucide-react';
+import { Moon, Star, Sparkles, Download, Share2, Loader2, MessageSquare, BookOpen, LayoutGrid } from 'lucide-react';
 import { cn, formatDate, getSignEmoji, getPlanetEmoji } from '@/lib/utils';
 import { ChartWheel } from '@/components/chart/ChartWheel';
+import { VedicChart } from '@/components/chart/VedicChart';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
 
 export default function ChartPage() {
@@ -21,6 +22,7 @@ export default function ChartPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
+  const [chartStyle, setChartStyle] = useState<'western' | 'vedic'>('western');
 
   useEffect(() => {
     if (authLoading) return;
@@ -157,6 +159,20 @@ export default function ChartPage() {
                     <p className="text-gray-500 dark:text-gray-400 mt-1">{subject.date} • {subject.zodiac} • {subject.house_system}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setChartStyle('western')}
+                      className={cn('p-2 rounded-lg transition-colors', chartStyle === 'western' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}
+                      title="Western Chart"
+                    >
+                      <Star className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setChartStyle('vedic')}
+                      className={cn('p-2 rounded-lg transition-colors', chartStyle === 'vedic' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')}
+                      title="Vedic Chart"
+                    >
+                      <LayoutGrid className="h-5 w-5" />
+                    </button>
                     <span className="px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">
                       {chart.metadata?.engine} / {chart.metadata?.ephemeris}
                     </span>
@@ -164,7 +180,14 @@ export default function ChartPage() {
                 </div>
               </div>
               <div className="p-6">
-                <ChartWheel planets={planets} houses={houses} aspects={aspects} />
+                {chartStyle === 'western' ? (
+                  <ChartWheel planets={planets} houses={houses} aspects={aspects} />
+                ) : (
+                  <VedicChart
+                    planets={planets}
+                    ascendant_sign={risingSign || ''}
+                  />
+                )}
               </div>
             </div>
 
