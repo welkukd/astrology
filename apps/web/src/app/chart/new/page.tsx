@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Moon, Loader2, MapPin, Clock, Calendar, AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
@@ -49,6 +49,12 @@ export default function NewChartPage() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounce) clearTimeout(searchDebounce);
+    };
+  }, [searchDebounce]);
 
   const handleSearch = useCallback(async (query: string) => {
     if (query.length < 3) {
