@@ -32,8 +32,10 @@ CREATE TABLE IF NOT EXISTS interpretations (
     model TEXT NOT NULL,
     tokens_in INTEGER,
     tokens_out INTEGER,
+    language TEXT NOT NULL DEFAULT 'en',
+    reading_data JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(chart_id, type, context)
+    UNIQUE(chart_id, type, language)
 );
 
 -- Subscriptions table
