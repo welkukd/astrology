@@ -1,5 +1,8 @@
 import httpx
-from app.core.config import settings
+
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
