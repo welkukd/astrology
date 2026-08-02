@@ -1353,11 +1353,12 @@ export function getFullReading(chart: any): ReadingSection[] {
   // 2. Planet in Sign sections
   if (chart.planets) {
     for (const planet of chart.planets) {
-      const interp = getPlanetInSign(planet.id, planet.sign);
+      const pname = planet.name || planet.id;
+      const interp = getPlanetInSign(pname, planet.sign);
       sections.push({
-        title: `${planet.id} in ${planet.sign}`,
+        title: `${pname} in ${planet.sign}`,
         content: interp,
-        icon: planet.id,
+        icon: pname,
       });
     }
   }
@@ -1365,12 +1366,13 @@ export function getFullReading(chart: any): ReadingSection[] {
   // 3. Planet in House sections
   if (chart.planets) {
     for (const planet of chart.planets) {
+      const pname = planet.name || planet.id;
       if (planet.house) {
-        const interp = getPlanetInHouse(planet.id, planet.house);
+        const interp = getPlanetInHouse(pname, planet.house);
         sections.push({
-          title: `${planet.id} in House ${planet.house}`,
+          title: `${pname} in House ${planet.house}`,
           content: interp,
-          icon: planet.id,
+          icon: pname,
         });
       }
     }
@@ -1379,7 +1381,7 @@ export function getFullReading(chart: any): ReadingSection[] {
   // 4. Aspect sections
   if (chart.aspects) {
     for (const asp of chart.aspects) {
-      const interp = getAspectInterpretation(asp.planet1, asp.planet2, asp.type);
+      const interp = getAspectInterpretation(asp.planet1, asp.planet2, asp.aspect || asp.type);
       sections.push({
         title: `${asp.planet1} ${asp.type} ${asp.planet2}`,
         content: interp,
@@ -1547,7 +1549,7 @@ export function getDashaReading(chart: any): ReadingSection[] {
   ];
 
   // Determine which dasha is most relevant based on Moon's nakshatra
-  const moon = chart.planets?.find((p: any) => p.id === "Moon");
+  const moon = chart.planets?.find((p: any) => (p.name || p.id) === "Moon");
   const moonNakshatra = moon?.nakshatra;
 
   const nakshatraLordMap: Record<string, string> = {
