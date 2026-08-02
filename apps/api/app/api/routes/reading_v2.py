@@ -126,3 +126,19 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
 
     _save_cache(chart_id, lang, reading)
     return {"status": "generated", "reading": reading}
+
+
+from fastapi.responses import Response
+
+
+@router.get("/reading/{chart_id}/pdf")
+async def get_reading_pdf(chart_id: str, lang: str = "ml", user_id: str = Depends(get_current_user_id)):
+    cached = _get_cached(chart_id, lang)
+    if not cached:
+        raise HTTPException(status_code=404, detail="Reading not generated yet. POST /reading/{id}/generate first.")
+
+    chart = _fetch_chart(chart_id, user_id)
+    from app.services.pdf_generator import generate_reading_pdf
+    pdf_bytes = generate_reading_pdf(cached, chart, lang)
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename=reading-{chart_id}.pdf"})
