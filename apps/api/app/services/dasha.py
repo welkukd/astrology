@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 
 
@@ -126,7 +126,7 @@ def calculate_dasha(natal_chart: dict) -> dict:
         current_start = end
         current_lord = _next_planet(current_lord)
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     current_mahadasha = None
     current_antardasha = None
     for md in mahadashas:
