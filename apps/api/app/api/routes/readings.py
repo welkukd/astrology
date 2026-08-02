@@ -7,6 +7,7 @@ import json
 from app.core.security import get_current_user_id
 from app.core.database import get_supabase_client
 from app.core.config import get_settings
+from app.services.ai import call_gemini
 
 settings = get_settings()
 router = APIRouter(prefix="/v1", tags=["readings"])
@@ -89,18 +90,6 @@ def _chart_summary(chart: dict) -> str:
         lines.append(f"  {a['planet1']} {a['aspect']} {a['planet2']} (orb {a.get('orb', 0):.1f}°)")
 
     return "\n".join(lines)
-
-
-async def _call_gemini(prompt: str) -> str:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 2000},
-    }
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def _save_reading(chart_id: str, reading_type: str, content: str, context: dict = None):
@@ -186,7 +175,7 @@ What the current Dasha period means for you. 100-150 words.
 ### Active Transits
 What current planetary transits are highlighting in your life. 100-150 words."""
 
-    reading = await _call_gemini(prompt)
+    reading = await call_gemini(prompt)
     _save_reading(data.chart_id, "full_reading", reading)
     return {"type": "full_reading", "content": reading}
 
@@ -236,7 +225,7 @@ Best months for career moves, relationships, finances. Approximate timing of imp
 ### Advice for {data.year}
 Practical guidance for navigating the year. 100-150 words."""
 
-    reading = await _call_gemini(prompt)
+    reading = await call_gemini(prompt)
     _save_reading(data.chart_id, f"yearly_{data.year}", reading, {"year": data.year})
     return {"type": f"yearly_{data.year}", "content": reading}
 
@@ -287,7 +276,7 @@ Health trends for the month. 50-100 words.
 ### Best Dates
 Best days/times for important actions. 50-100 words."""
 
-    reading = await _call_gemini(prompt)
+    reading = await call_gemini(prompt)
     _save_reading(data.chart_id, f"monthly_{data.year}_{data.month}", reading, {"year": data.year, "month": data.month})
     return {"type": f"monthly_{data.year}_{data.month}", "content": reading}
 
@@ -350,7 +339,7 @@ Brief description of what each planet's Mahadasha brings:
 ### Guidance
 How to work with the current Dasha energy. 100-150 words."""
 
-    reading = await _call_gemini(prompt)
+    reading = await call_gemini(prompt)
     _save_reading(data.chart_id, "dasha_reading", reading)
     return {"type": "dasha_reading", "content": reading, "dasha_data": dasha_data}
 
@@ -396,6 +385,6 @@ Key dates and windows for important transits in the coming months. 100-150 words
 ### Advice
 Practical guidance for working with current transit energies. 100-150 words."""
 
-    reading = await _call_gemini(prompt)
+    reading = await call_gemini(prompt)
     _save_reading(data.chart_id, "transits_reading", reading)
     return {"type": "transits_reading", "content": reading}

@@ -6,6 +6,7 @@ import httpx
 from app.core.config import get_settings
 from app.core.security import get_current_user_id
 from app.core.database import get_supabase_client
+from app.services.ai import call_gemini
 
 settings = get_settings()
 router = APIRouter(prefix="/v1", tags=["ai"])
@@ -128,17 +129,7 @@ async def call_ai(prompt: str) -> str:
 
 
 async def _call_gemini(prompt: str) -> str:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1000},
-    }
-
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+    return await call_gemini(prompt, max_tokens=2000)
 
 
 async def _call_groq(prompt: str) -> str:
