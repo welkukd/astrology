@@ -104,8 +104,12 @@ export default function ReadingPage() {
       // Fetch chart data
       try {
         const chartRes = await fetch(`/api/charts/${chartId}`, { headers: authHeaders() });
-        if (chartRes.ok) setChart(await chartRes.json());
-      } catch {}
+        if (!chartRes.ok) { router.push('/chart/new'); return; }
+        setChart(await chartRes.json());
+      } catch {
+        router.push('/chart/new');
+        return;
+      }
 
       // Fetch cached reading
       const cached = await fetchReading(language);
