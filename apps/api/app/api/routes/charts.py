@@ -29,26 +29,55 @@ async def create_natal_chart(data: BirthData, user_id: str = Depends(get_current
         supabase = get_supabase_client()
         chart_hash = chart["chart_id"]
 
-        supabase.table("charts").upsert({
-            "id": chart["chart_id"],
-            "user_id": user_id,
-            "chart_hash": chart_hash,
-            "subject_name": data.name or "Me",
-            "birth_datetime_utc": f"{data.date}T{data.time or '12:00'}:00Z",
-            "birth_latitude": data.latitude,
-            "birth_longitude": data.longitude,
-            "birth_timezone": data.timezone,
-            "time_unknown": data.time_unknown,
-            "zodiac_system": data.zodiac.value,
-            "house_system": data.house_system.value,
-            "ayanamsa": data.ayanamsa.value if data.ayanamsa else None,
-            "chart_data": chart,
-        }, on_conflict="user_id,chart_hash").execute()
+        try:
+            supabase.table("charts").upsert({
+                "id": chart["chart_id"],
+                "user_id": user_id,
+                "chart_hash": chart_hash,
+                "subject_name": data.name or "Me",
+                "birth_datetime_utc": f"{data.date}T{data.time or '12:00'}:00Z",
+                "birth_latitude": data.latitude,
+                "birth_longitude": data.longitude,
+                "birth_timezone": data.timezone,
+                "time_unknown": data.time_unknown,
+                "zodiac_system": data.zodiac.value,
+                "house_system": data.house_system.value,
+                "ayanamsa": data.ayanamsa.value if data.ayanamsa else None,
+                "chart_data": chart,
+            }, on_conflict="user_id,chart_hash").execute()
+        except Exception as upsert_err:
+            err_str = str(upsert_err)
+            if "23505" in err_str or "duplicate key" in err_str.lower():
+                existing = supabase.table("charts").select("chart_data") \
+                    .eq("user_id", user_id).eq("chart_hash", chart_hash).execute()
+                if existing.data:
+                    return existing.data[0]["chart_data"]
+                import uuid
+                chart["chart_id"] = str(uuid.uuid4())
+                supabase.table("charts").insert({
+                    "id": chart["chart_id"],
+                    "user_id": user_id,
+                    "chart_hash": chart_hash,
+                    "subject_name": data.name or "Me",
+                    "birth_datetime_utc": f"{data.date}T{data.time or '12:00'}:00Z",
+                    "birth_latitude": data.latitude,
+                    "birth_longitude": data.longitude,
+                    "birth_timezone": data.timezone,
+                    "time_unknown": data.time_unknown,
+                    "zodiac_system": data.zodiac.value,
+                    "house_system": data.house_system.value,
+                    "ayanamsa": data.ayanamsa.value if data.ayanamsa else None,
+                    "chart_data": chart,
+                }).execute()
+                return chart
+            raise
 
         return chart
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         tb = traceback.format_exc()

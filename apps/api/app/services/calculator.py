@@ -80,12 +80,14 @@ HOUSE_SYSTEM_MAP = {
 
 
 def _get_utc_offset(timezone_str: str) -> float:
+    if not timezone_str or not timezone_str.strip():
+        return 5.5
     try:
         dt_now = datetime.now(ZoneInfo(timezone_str))
         offset_seconds = dt_now.utcoffset().total_seconds() if dt_now.utcoffset() else 0
         return offset_seconds / 3600
-    except (KeyError, TypeError):
-        return 0
+    except (KeyError, TypeError, ValueError):
+        return 5.5
 
 
 def _sign_name(lon: float) -> str:

@@ -102,6 +102,8 @@ export default function NewChartPage() {
       if (!formData.date) return 'Date of birth is required';
       if (!formData.timeUnknown && !formData.time) return 'Time of birth is required (or check "Time Unknown")';
       if (formData.latitude === null || formData.latitude === undefined || formData.longitude === null || formData.longitude === undefined) return 'Please select a birth location';
+      if (formData.latitude === 0 && formData.longitude === 0) return 'Location could not be resolved. Please search and select your birth city from the suggestions.';
+      if (!formData.timezone) return 'Timezone could not be determined. Please search and select your birth city from the suggestions.';
       return null;
     }
     return null;
