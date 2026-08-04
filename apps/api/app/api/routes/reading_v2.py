@@ -25,7 +25,7 @@ def _fetch_chart(chart_id: str, user_id: str) -> dict:
     supabase = get_supabase_client()
     result = supabase.table("charts").select("chart_data") \
         .eq("id", chart_id).eq("user_id", user_id).single().execute()
-    if not result.data:
+    if not result or not result.data:
         raise HTTPException(status_code=404, detail="Chart not found")
     return result.data["chart_data"]
 
@@ -35,7 +35,7 @@ def _get_cached(chart_id: str, language: str) -> dict | None:
     result = supabase.table("interpretations").select("reading_data") \
         .eq("chart_id", chart_id).eq("type", "full_v2") \
         .eq("language", language).maybe_single().execute()
-    if result.data and result.data.get("reading_data"):
+    if result and result.data and result.data.get("reading_data"):
         return result.data["reading_data"]
     return None
 
@@ -55,14 +55,8 @@ def _save_cache(chart_id: str, language: str, reading_data: dict):
 
 @router.get("/reading/{chart_id}")
 async def get_reading(chart_id: str, lang: str = "ml", user_id: str = Depends(get_current_user_id)):
-    try:
-        _fetch_chart(chart_id, user_id)
-    except Exception as e:
-        return {"error": "fetch_chart failed", "detail": str(e), "type": type(e).__name__}
-    try:
-        cached = _get_cached(chart_id, lang)
-    except Exception as e:
-        return {"error": "get_cached failed", "detail": str(e), "type": type(e).__name__}
+    _fetch_chart(chart_id, user_id)
+    cached = _get_cached(chart_id, lang)
     if cached:
         return {"status": "cached", "reading": cached}
     return {"status": "not_generated"}
