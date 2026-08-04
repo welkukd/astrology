@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+import traceback
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -33,6 +35,14 @@ app.include_router(charts.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(readings.router, prefix="/api")
 app.include_router(reading_v2.router, prefix="/api")
+
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)[:3000], "traceback": traceback.format_exc()[:6000]},
+    )
 
 
 @app.get("/health")
