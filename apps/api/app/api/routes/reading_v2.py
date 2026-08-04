@@ -55,8 +55,14 @@ def _save_cache(chart_id: str, language: str, reading_data: dict):
 
 @router.get("/reading/{chart_id}")
 async def get_reading(chart_id: str, lang: str = "ml", user_id: str = Depends(get_current_user_id)):
-    _fetch_chart(chart_id, user_id)
-    cached = _get_cached(chart_id, lang)
+    try:
+        _fetch_chart(chart_id, user_id)
+    except Exception as e:
+        return {"error": "fetch_chart failed", "detail": str(e), "type": type(e).__name__}
+    try:
+        cached = _get_cached(chart_id, lang)
+    except Exception as e:
+        return {"error": "get_cached failed", "detail": str(e), "type": type(e).__name__}
     if cached:
         return {"status": "cached", "reading": cached}
     return {"status": "not_generated"}
