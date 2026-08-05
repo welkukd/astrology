@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
-    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL: str = "meta-llama/llama-3.1-8b-instruct:free"
+    OPENROUTER_BASE_URL: str = "https://opencode.ai/zen/v1"
+    OPENROUTER_MODEL: str = "mimo-v2.5-free"
     
     REDIS_URL: str = ""
     

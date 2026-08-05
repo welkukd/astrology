@@ -43,21 +43,20 @@ async def call_gemini_json(prompt: str, max_tokens: int = 8192) -> dict:
 
 
 async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: float = 0.3) -> str:
-    """Call OpenRouter (OpenAI-compatible) with free models."""
-    url = f"{settings.OPENROUTER_BASE_URL}/chat/completions"
+    """Call OpenCode Zen (OpenAI-compatible) with free models."""
+    base = settings.OPENROUTER_BASE_URL or "https://opencode.ai/zen/v1"
+    url = f"{base}/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://astrology-web-tawny.vercel.app",
-        "X-Title": "Astrology Assistant",
     }
     payload = {
-        "model": settings.OPENROUTER_MODEL,
+        "model": settings.OPENROUTER_MODEL or "mimo-v2.5-free",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
