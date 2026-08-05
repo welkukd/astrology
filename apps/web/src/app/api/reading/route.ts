@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('your-backend'))
   ? process.env.NEXT_PUBLIC_API_URL
-  : 'https://astrology-api-production-8082.up.railway.app';
+  : 'https://astrology-api-production-813b.up.railway.app';
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 

@@ -113,17 +113,26 @@ def build_prompt(itype: str, chart: dict, context: dict) -> str:
 
 
 async def call_ai(prompt: str) -> str:
+    from app.services.ai import call_openrouter
     provider = settings.AI_PROVIDER
     content = ""
 
-    if provider == "gemini" and settings.GEMINI_API_KEY:
+    if provider == "openrouter" and settings.OPENROUTER_API_KEY:
+        content = await call_openrouter(prompt)
+    elif provider == "gemini" and settings.GEMINI_API_KEY:
         content = await _call_gemini(prompt)
     elif provider == "groq" and settings.GROQ_API_KEY:
         content = await _call_groq(prompt)
     elif provider == "openai" and settings.OPENAI_API_KEY:
         content = await _call_openai(prompt)
     else:
-        content = await _call_gemini(prompt)
+        # Fallback: try openrouter, then gemini
+        if settings.OPENROUTER_API_KEY:
+            content = await call_openrouter(prompt)
+        elif settings.GEMINI_API_KEY:
+            content = await _call_gemini(prompt)
+        else:
+            content = "AI interpretation unavailable. Please try again later."
 
     return content
 
