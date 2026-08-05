@@ -100,10 +100,11 @@ def _save_reading(chart_id: str, reading_type: str, content: str, context: dict 
             "type": reading_type,
             "context": context or {},
             "content": content,
-            "model": "gemini-flash",
+            "model": settings.AI_PROVIDER if hasattr(settings, 'AI_PROVIDER') else "gemini-flash",
             "tokens_in": len(content) // 4,
             "tokens_out": len(content) // 4,
-        }, on_conflict="chart_id,type,context").execute()
+            "language": "en",
+        }, on_conflict="chart_id,type,language").execute()
     except Exception:
         pass
 

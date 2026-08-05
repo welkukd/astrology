@@ -75,7 +75,8 @@ async def interpret(data: InterpretationRequest, user_id: str = Depends(get_curr
         "model": settings.AI_PROVIDER,
         "tokens_in": len(prompt) // 4,
         "tokens_out": len(interpretation_text) // 4,
-    }, on_conflict="chart_id,type,context").execute()
+        "language": "en",
+    }, on_conflict="chart_id,type,language").execute()
 
     return {"type": data.type, "content": interpretation_text}
 
