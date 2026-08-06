@@ -7,7 +7,7 @@ import json
 from app.core.security import get_current_user_id
 from app.core.database import get_supabase_client
 from app.core.config import get_settings
-from app.services.ai import call_gemini
+from app.services.ai import call_ai
 
 settings = get_settings()
 router = APIRouter(prefix="/v1", tags=["readings"])
@@ -176,7 +176,7 @@ What the current Dasha period means for you. 100-150 words.
 ### Active Transits
 What current planetary transits are highlighting in your life. 100-150 words."""
 
-    reading = await call_gemini(prompt)
+    reading = await call_ai(prompt)
     _save_reading(data.chart_id, "full_reading", reading)
     return {"type": "full_reading", "content": reading}
 
@@ -226,7 +226,7 @@ Best months for career moves, relationships, finances. Approximate timing of imp
 ### Advice for {data.year}
 Practical guidance for navigating the year. 100-150 words."""
 
-    reading = await call_gemini(prompt)
+    reading = await call_ai(prompt)
     _save_reading(data.chart_id, f"yearly_{data.year}", reading, {"year": data.year})
     return {"type": f"yearly_{data.year}", "content": reading}
 
@@ -277,7 +277,7 @@ Health trends for the month. 50-100 words.
 ### Best Dates
 Best days/times for important actions. 50-100 words."""
 
-    reading = await call_gemini(prompt)
+    reading = await call_ai(prompt)
     _save_reading(data.chart_id, f"monthly_{data.year}_{data.month}", reading, {"year": data.year, "month": data.month})
     return {"type": f"monthly_{data.year}_{data.month}", "content": reading}
 
@@ -340,7 +340,7 @@ Brief description of what each planet's Mahadasha brings:
 ### Guidance
 How to work with the current Dasha energy. 100-150 words."""
 
-    reading = await call_gemini(prompt)
+    reading = await call_ai(prompt)
     _save_reading(data.chart_id, "dasha_reading", reading)
     return {"type": "dasha_reading", "content": reading, "dasha_data": dasha_data}
 
@@ -386,6 +386,6 @@ Key dates and windows for important transits in the coming months. 100-150 words
 ### Advice
 Practical guidance for working with current transit energies. 100-150 words."""
 
-    reading = await call_gemini(prompt)
+    reading = await call_ai(prompt)
     _save_reading(data.chart_id, "transits_reading", reading)
     return {"type": "transits_reading", "content": reading}

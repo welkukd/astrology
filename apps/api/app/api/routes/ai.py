@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional
-import httpx
 
 from app.core.config import get_settings
 from app.core.security import get_current_user_id
 from app.core.database import get_supabase_client
-from app.services.ai import call_gemini
+from app.services.ai import call_ai
 
 settings = get_settings()
 router = APIRouter(prefix="/v1", tags=["ai"])
@@ -61,9 +60,6 @@ async def interpret(data: InterpretationRequest, user_id: str = Depends(get_curr
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chart not found")
 
     chart = result.data["chart_data"]
-    cache_key = f"{data.chart_id}:{data.type}:{hash(str(data.context))}"
-    cached = None
-
     prompt = build_prompt(data.type, chart, data.context or {})
     interpretation_text = await call_ai(prompt)
 
@@ -111,66 +107,3 @@ def build_prompt(itype: str, chart: dict, context: dict) -> str:
         template = template.replace(k, v)
 
     return template
-
-
-async def call_ai(prompt: str) -> str:
-    from app.services.ai import call_openrouter
-    provider = settings.AI_PROVIDER
-    content = ""
-
-    if provider == "openrouter" and settings.OPENROUTER_API_KEY:
-        content = await call_openrouter(prompt)
-    elif provider == "gemini" and settings.GEMINI_API_KEY:
-        content = await _call_gemini(prompt)
-    elif provider == "groq" and settings.GROQ_API_KEY:
-        content = await _call_groq(prompt)
-    elif provider == "openai" and settings.OPENAI_API_KEY:
-        content = await _call_openai(prompt)
-    else:
-        # Fallback: try openrouter, then gemini
-        if settings.OPENROUTER_API_KEY:
-            content = await call_openrouter(prompt)
-        elif settings.GEMINI_API_KEY:
-            content = await _call_gemini(prompt)
-        else:
-            content = "AI interpretation unavailable. Please try again later."
-
-    return content
-
-
-async def _call_gemini(prompt: str) -> str:
-    return await call_gemini(prompt, max_tokens=2000)
-
-
-async def _call_groq(prompt: str) -> str:
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "llama-3.1-70b-versatile",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3,
-        "max_tokens": 1000,
-    }
-
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-
-
-async def _call_openai(prompt: str) -> str:
-    url = "https://api.openai.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {settings.OPENAI_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3,
-        "max_tokens": 1000,
-    }
-
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(url, json=payload, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]

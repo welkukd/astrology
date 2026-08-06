@@ -1,9 +1,9 @@
+import json
 import httpx
 
 from app.core.config import get_settings
 
 settings = get_settings()
-
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
 
@@ -38,7 +38,6 @@ async def call_gemini_json(prompt: str, max_tokens: int = 8192) -> dict:
         lines = text.split("\n")
         lines = [ln for ln in lines if not ln.startswith("```")]
         text = "\n".join(lines)
-    import json
     return json.loads(text)
 
 
@@ -61,3 +60,22 @@ async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: floa
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"]
+
+
+async def call_ai(prompt: str, max_tokens: int = 8192, temperature: float = 0.4) -> str:
+    """Route to the configured AI provider (AI_PROVIDER env var)."""
+    provider = settings.AI_PROVIDER or "gemini"
+    if provider == "openrouter":
+        return await call_openrouter(prompt, max_tokens=max_tokens, temperature=temperature)
+    return await call_gemini(prompt, max_tokens=max_tokens, temperature=temperature)
+
+
+async def call_ai_json(prompt: str, max_tokens: int = 8192) -> dict:
+    """Call the configured AI provider and parse JSON response."""
+    raw = await call_ai(prompt, max_tokens=max_tokens, temperature=0.3)
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        lines = [ln for ln in lines if not ln.startswith("```")]
+        text = "\n".join(lines)
+    return json.loads(text)

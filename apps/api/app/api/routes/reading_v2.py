@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.core.security import get_current_user_id
 from app.core.database import get_supabase_client
-from app.services.ai import call_gemini
+from app.services.ai import call_ai
 from app.services.chart_context import build_chart_context
 from app.services.dasha import calculate_dasha
 
@@ -108,7 +108,7 @@ Respond ONLY with valid JSON (no markdown, no code fences) in this exact structu
 
 For each section, reference SPECIFIC placements from the chart data above. Do not write generic templates — write about THIS person's actual chart."""
 
-    raw = await call_gemini(prompt, max_tokens=8192, temperature=0.5)
+    raw = await call_ai(prompt, max_tokens=8192, temperature=0.5)
     text = raw.strip()
     if text.startswith("```"):
         lines = text.split("\n")
