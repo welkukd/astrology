@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase';
+import { useAuth } from '@/app/providers';
 import { Moon, Loader2, AlertCircle } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { supabase } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,10 +16,10 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) { setError('Auth not initialized'); return; }
     setLoading(true);
     setError(null);
     try {
-      const supabase = createClient();
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       router.push('/chart/new');
@@ -38,7 +39,7 @@ export default function SignupPage() {
           <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" /></div>
           <button type="submit" disabled={loading} className="w-full py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}Create Account</button>
         </form>
-        <div className="mt-4 text-center"><button onClick={async () => { const s = createClient(); await s.auth.signInWithOAuth({ provider: 'google' }); }} className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Continue with Google</button></div>
+        <div className="mt-4 text-center"><button onClick={async () => { if (supabase) await supabase.auth.signInWithOAuth({ provider: 'google' }); }} className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Continue with Google</button></div>
         <p className="mt-4 text-center text-sm text-gray-500">Already have an account? <Link href="/auth/login" className="text-primary-600 hover:underline">Sign In</Link></p>
       </div>
     </div>
