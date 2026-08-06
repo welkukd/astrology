@@ -3,19 +3,32 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
-import { Moon, Plus, Loader2, Calendar, Trash2, BookOpen, Star } from 'lucide-react';
+import { Moon, Plus, Loader2, Calendar, Trash2, BookOpen, Star, CreditCard, Zap, Crown, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+
+type BillingStatus = {
+  plan: string;
+  status: string;
+  plan_id?: string;
+  current_period_end?: number;
+  cancel_at_period_end?: boolean;
+  charts_used: number;
+  charts_limit: number;
+};
 
 export default function DashboardPage() {
   const { session, loading: authLoading } = useAuth();
   const [charts, setCharts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
     if (!session) return;
     fetchCharts();
+    fetchBilling();
   }, [session, authLoading]);
 
   const fetchCharts = async () => {
@@ -26,6 +39,28 @@ export default function DashboardPage() {
       if (res.ok) setCharts(await res.json());
     } catch {}
     finally { setLoading(false); }
+  };
+
+  const fetchBilling = async () => {
+    try {
+      const res = await fetch('/api/billing/status', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.ok) setBilling(await res.json());
+    } catch {}
+  };
+
+  const openPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {}
+    finally { setPortalLoading(false); }
   };
 
   if (authLoading || loading) {
@@ -44,12 +79,80 @@ export default function DashboardPage() {
     );
   }
 
+  const isPro = billing?.plan === 'pro';
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Charts</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">{charts.length} chart{charts.length !== 1 ? 's' : ''} saved</p>
+        {/* Billing Status Card */}
+        <div className="mb-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 rounded-xl",
+                isPro ? "bg-primary-50 dark:bg-primary-900/20" : "bg-gray-100 dark:bg-gray-800"
+              )}>
+                {isPro ? (
+                  <Zap className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                ) : (
+                  <Star className="h-6 w-6 text-gray-400" />
+                )}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  {isPro ? 'Pro Plan' : 'Free Plan'}
+                  {isPro && billing?.plan_id === 'lifetime' && (
+                    <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded-full font-medium">
+                      Lifetime
+                    </span>
+                  )}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {isPro
+                    ? billing?.cancel_at_period_end
+                      ? `Cancels ${billing.current_period_end ? format(new Date(billing.current_period_end * 1000), 'MMM d, yyyy') : 'soon'}`
+                      : billing?.plan_id === 'lifetime'
+                        ? 'One-time payment — no expiry'
+                        : `Renews ${billing?.current_period_end ? format(new Date(billing.current_period_end * 1000), 'MMM d, yyyy') : ''}`
+                    : `${billing?.charts_used ?? charts.length} of ${billing?.charts_limit ?? 3} free charts used`
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {isPro ? (
+                <button
+                  onClick={openPortal}
+                  disabled={portalLoading}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium disabled:opacity-50"
+                >
+                  {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Manage Subscription
+                </button>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="flex items-center gap-2 px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+                >
+                  <Zap className="h-4 w-4" /> Upgrade to Pro
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Charts</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{charts.length} chart{charts.length !== 1 ? 's' : ''} saved</p>
+          </div>
+          <Link
+            href="/chart/new"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 font-medium text-sm"
+          >
+            <Plus className="h-5 w-5" /> New Chart
+          </Link>
         </div>
 
         {charts.length === 0 ? (

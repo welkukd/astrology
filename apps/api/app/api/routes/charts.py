@@ -8,9 +8,27 @@ from app.core.database import get_supabase_client
 
 router = APIRouter(prefix="/v1", tags=["charts"])
 
+FREE_CHART_LIMIT = 3
+
+
+async def _check_chart_limit(user_id: str):
+    supabase = get_supabase_client()
+    result = supabase.table("subscriptions").select("status, plan_id") \
+        .eq("user_id", user_id).maybe_single().execute()
+    if result and result.data and result.data.get("status") == "active" and result.data.get("plan_id"):
+        return  # Pro user — unlimited
+    count_result = supabase.table("charts").select("id", count="exact") \
+        .eq("user_id", user_id).execute()
+    if (count_result.count or 0) >= FREE_CHART_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Free plan limited to {FREE_CHART_LIMIT} charts. Upgrade to Pro for unlimited.",
+        )
+
 
 @router.post("/natal")
 async def create_natal_chart(data: BirthData, user_id: str = Depends(get_current_user_id)):
+    await _check_chart_limit(user_id)
     try:
         chart = calculate_chart(
             date_str=data.date,

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.core.config import get_settings
-from app.api.routes import charts, ai, readings, reading_v2
+from app.api.routes import charts, ai, readings, reading_v2, billing
 
 settings = get_settings()
 
@@ -33,6 +33,7 @@ app.include_router(charts.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(readings.router, prefix="/api")
 app.include_router(reading_v2.router, prefix="/api")
+app.include_router(billing.router, prefix="/api")
 
 
 @app.get("/health")

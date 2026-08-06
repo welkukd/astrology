@@ -1,15 +1,152 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Check, Star, Zap, Crown, Sparkles, Loader2 } from 'lucide-react';
+import { useAuth } from '@/app/providers';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
 
+const TIERS = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    description: 'Try it out — no card required',
+    icon: Star,
+    color: 'gray',
+    features: [
+      '3 birth charts',
+      'Basic AI interpretations',
+      'Western & Vedic zodiac',
+      '10 house systems',
+      'Chart export (JSON)',
+      'Data deletion anytime',
+    ],
+    cta: 'Get Started Free',
+    ctaHref: '/chart/new',
+    highlighted: false,
+    priceId: null,
+    mode: null,
+  },
+  {
+    name: 'Pro Monthly',
+    price: '$4.99',
+    period: '/month',
+    description: 'Full access, cancel anytime',
+    icon: Zap,
+    color: 'primary',
+    features: [
+      'Unlimited birth charts',
+      'Full AI readings (9 sections)',
+      '22+ house systems',
+      'Planetary dignities & nakshatras',
+      'PDF export',
+      'Daily horoscope',
+      'Compatibility analysis',
+      'Priority support',
+    ],
+    cta: 'Start Pro',
+    ctaHref: null,
+    highlighted: true,
+    priceId: 'STRIPE_PRICE_PRO_MONTHLY',
+    mode: 'subscription',
+  },
+  {
+    name: 'Lifetime',
+    price: '$29.99',
+    period: 'one-time',
+    description: 'Pay once, use forever',
+    icon: Crown,
+    color: 'yellow',
+    features: [
+      'Everything in Pro',
+      'One-time payment',
+      'No subscription needed',
+      'All future features included',
+      'Priority support forever',
+    ],
+    cta: 'Get Lifetime',
+    ctaHref: null,
+    highlighted: false,
+    priceId: 'STRIPE_PRICE_LIFETIME',
+    mode: 'payment',
+  },
+];
+
+const COLOR_MAP: Record<string, { border: string; bg: string; text: string; btn: string; icon: string }> = {
+  gray: {
+    border: 'border-gray-200 dark:border-gray-700',
+    bg: 'bg-white dark:bg-gray-900',
+    text: 'text-gray-900 dark:text-white',
+    btn: 'bg-gray-900 dark:bg-white dark:text-gray-900 text-white hover:bg-gray-800',
+    icon: 'text-gray-400',
+  },
+  primary: {
+    border: 'border-primary-500 dark:border-primary-400 ring-2 ring-primary-500/20',
+    bg: 'bg-white dark:bg-gray-900',
+    text: 'text-gray-900 dark:text-white',
+    btn: 'bg-primary-600 text-white hover:bg-primary-700',
+    icon: 'text-primary-600 dark:text-primary-400',
+  },
+  yellow: {
+    border: 'border-yellow-400 dark:border-yellow-500',
+    bg: 'bg-white dark:bg-gray-900',
+    text: 'text-gray-900 dark:text-white',
+    btn: 'bg-yellow-500 text-gray-900 hover:bg-yellow-400 font-bold',
+    icon: 'text-yellow-500',
+  },
+};
+
 export default function PricingPage() {
+  const router = useRouter();
+  const { session } = useAuth();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (tier: typeof TIERS[0]) => {
+    if (!session) {
+      router.push('/auth/signup');
+      return;
+    }
+
+    if (tier.ctaHref) {
+      router.push(tier.ctaHref);
+      return;
+    }
+
+    // Stripe checkout
+    if (!tier.priceId || !tier.mode) return;
+
+    setLoading(tier.name);
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          price_id: tier.priceId,
+          mode: tier.mode,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch {
+      alert('Checkout unavailable. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <DisclaimerBanner />
       <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 h-16">
             <Link href="/" className="flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
               <ArrowLeft className="h-5 w-5" />
@@ -21,55 +158,124 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
+            <Sparkles className="h-4 w-4" />
+            Trusted by 10,000+ users
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Simple, Transparent Pricing
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Our astrology calculations and interpretations are completely free. No hidden fees, no premium tiers.
+            Professional-grade astrology powered by Swiss Ephemeris and AI. Start free, upgrade when you&apos;re ready.
           </p>
         </div>
 
-        <div className="max-w-md mx-auto">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-primary-500 dark:border-primary-400 p-8 shadow-xl">
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="h-6 w-6 text-primary-600 dark:text-primary-400" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Free Forever</h2>
-            </div>
-            <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">$0</p>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">No credit card required</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {TIERS.map((tier) => {
+            const colors = COLOR_MAP[tier.color];
+            const Icon = tier.icon;
+            const isLoading = loading === tier.name;
 
-            <ul className="space-y-3 mb-8">
-              {[
-                'Unlimited natal chart calculations',
-                'Swiss Ephemeris precision',
-                'AI-powered interpretations',
-                '12+ house systems',
-                'Tropical & Sidereal zodiac',
-                'Aspects, dignities & nakshatras',
-                'Chart export (JSON)',
-                'Data deletion anytime',
-              ].map((feature) => (
-                <li key={feature} className="flex items-start gap-3">
-                  <Check className="h-5 w-5 text-primary-600 dark:text-primary-400 mt-0.5 shrink-0" />
-                  <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
-                </li>
-              ))}
-            </ul>
+            return (
+              <div
+                key={tier.name}
+                className={`relative rounded-2xl border-2 ${colors.border} ${colors.bg} p-8 flex flex-col ${
+                  tier.highlighted ? 'shadow-xl scale-[1.02]' : 'shadow-sm'
+                }`}
+              >
+                {tier.highlighted && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="bg-primary-600 text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
 
-            <Link
-              href="/chart/new"
-              className="block w-full py-3 bg-primary-600 text-white rounded-xl text-center font-semibold hover:bg-primary-700 transition-colors"
-            >
-              Get Started Free
-            </Link>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2 rounded-xl bg-gray-100 dark:bg-gray-800 ${colors.icon}`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <h3 className={`text-xl font-bold ${colors.text}`}>{tier.name}</h3>
+                </div>
+
+                <div className="mb-1">
+                  <span className={`text-4xl font-extrabold ${colors.text}`}>{tier.price}</span>
+                  <span className="text-gray-500 dark:text-gray-400 text-sm ml-1">{tier.period}</span>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{tier.description}</p>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-3">
+                      <Check className={`h-5 w-5 mt-0.5 shrink-0 ${colors.icon}`} />
+                      <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleCheckout(tier)}
+                  disabled={isLoading}
+                  className={`w-full py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 ${colors.btn}`}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                  ) : (
+                    tier.cta
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-16 text-center">
+          <div className="inline-flex flex-col sm:flex-row items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-500" />
+              No credit card for Free
+            </span>
+            <span className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-500" />
+              Cancel anytime
+            </span>
+            <span className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-500" />
+              Secure payments via Stripe
+            </span>
           </div>
         </div>
 
-        <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">
-          This is a self-hosted open-source project. All features are free to use.
-        </p>
+        <div className="mt-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 max-w-3xl mx-auto">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Frequently Asked Questions</h3>
+          <div className="space-y-4">
+            {[
+              {
+                q: 'What calculations do you use?',
+                a: 'Swiss Ephemeris — the same library professional astrologers use. Sub-arcsecond accuracy for all planetary positions.',
+              },
+              {
+                q: 'Is my birth data private?',
+                a: 'Yes. Your data is encrypted, never sold, and you can delete everything with one click. GDPR & CCPA compliant.',
+              },
+              {
+                q: 'Can I cancel anytime?',
+                a: 'Yes. Cancel from your dashboard anytime. You keep access until the end of your billing period.',
+              },
+              {
+                q: 'What AI model do you use?',
+                a: 'We use advanced language models to interpret your chart. The AI provides clear, personalized insights — no fake astrologer personas.',
+              },
+            ].map((faq) => (
+              <div key={faq.q}>
+                <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{faq.q}</h4>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
