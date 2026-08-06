@@ -110,15 +110,25 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
 
     raw = await call_ai(prompt, max_tokens=8192, temperature=0.5)
     text = raw.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = [ln for ln in lines if not ln.startswith("```")]
-        text = "\n".join(lines)
+
+    # Robust JSON extraction: strip markdown fences, find first { ... } block
+    import re
+    cleaned = re.sub(r'```(?:json)?\s*\n?', '', text)
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    cleaned = cleaned.strip()
 
     try:
-        sections = json.loads(text)
+        sections = json.loads(cleaned)
     except json.JSONDecodeError:
-        sections = {"overview": raw}
+        # Try to extract the first JSON object from the text
+        match = re.search(r'\{[\s\S]*\}', cleaned)
+        if match:
+            try:
+                sections = json.loads(match.group())
+            except json.JSONDecodeError:
+                sections = {"overview": raw}
+        else:
+            sections = {"overview": raw}
 
     reading = {
         "sections": sections,
