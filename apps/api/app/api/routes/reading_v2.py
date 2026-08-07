@@ -1,5 +1,7 @@
 import json
+import re
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.core.security import get_current_user_id
@@ -13,13 +15,13 @@ router = APIRouter(prefix="/v1", tags=["reading-v2"])
 
 class GenerateRequest(BaseModel):
     language: str = "ml"  # "ml" or "en"
+    force: bool = False   # True = skip cache, regenerate
 
 
 LANGUAGE_INSTRUCTION = {
     "ml": "Write the ENTIRE response in Malayalam (മലയാളം). Use proper Malayalam astrological terminology. Do not use any English words except planet names.",
     "en": "Write the ENTIRE response in English.",
 }
-
 
 def _fetch_chart(chart_id: str, user_id: str) -> dict:
     supabase = get_supabase_client()
@@ -67,10 +69,11 @@ async def generate_reading(chart_id: str, req: GenerateRequest, user_id: str = D
     lang = req.language if req.language in ("ml", "en") else "ml"
     lang_inst = LANGUAGE_INSTRUCTION[lang]
 
-    # Check cache first
-    cached = _get_cached(chart_id, lang)
-    if cached:
-        return {"status": "cached", "reading": cached}
+    # Check cache first (unless force=true)
+    if not req.force:
+        cached = _get_cached(chart_id, lang)
+        if cached:
+            return {"status": "cached", "reading": cached}
 
     chart = _fetch_chart(chart_id, user_id)
     context = build_chart_context(chart)
@@ -82,31 +85,26 @@ async def generate_reading(chart_id: str, req: GenerateRequest, user_id: str = D
     except Exception:
         pass
 
-    prompt = f"""You are a world-class Vedic astrologer with 30+ years of experience reading birth charts. You read charts HOLISTICALLY — synthesizing multiple factors, noting planetary dignities, combustion, retrograde effects, and house ruler relationships.
+    prompt = f"""You are a professional Vedic astrologer. Analyze this birth chart and provide a comprehensive reading.
+
+{context}
 
 {lang_inst}
 
-SAFETY RULES:
-- Use language like "may indicate," "suggests," "invites reflection on." Be supportive and empowering.
-- Never predict death, illness, or specific events. Never give medical, legal, or financial advice.
-
-BIRTH CHART DETAILS:
-{context}
-
-Respond ONLY with valid JSON (no markdown, no code fences) in this exact structure:
+Write your response as a JSON object with these keys (ALL values must be strings):
 {{
-  "overview": "800-word holistic life overview reading the entire chart",
-  "personality": "600-word synthesis of Sun, Moon, Rising and their interactions",
-  "career": "500-word analysis of 10th house, MC, Saturn, Mercury, career indicators",
-  "love": "500-word analysis of 7th house, Venus, Moon aspects, relationship patterns",
-  "wealth": "400-word analysis of 2nd and 8th houses, Jupiter, Venus, wealth patterns",
-  "health": "400-word analysis of 6th house, Mars, Saturn, Ascendant ruler",
-  "spirituality": "400-word analysis of 12th house, Ketu, Jupiter, spiritual indicators",
-  "challenges": "500-word analysis of hard aspects, squares, oppositions, growth edges",
-  "nakshatra": "400-word deep dive into the Moon nakshatra and its pada significance"
+  "overview": "800-word comprehensive life overview",
+  "personality": "500-word personality analysis",
+  "career": "500-word career analysis",
+  "love": "500-word love/relationship analysis",
+  "wealth": "400-word wealth analysis",
+  "health": "400-word health analysis",
+  "spirituality": "400-word spirituality analysis",
+  "challenges": "500-word challenges and growth areas",
+  "nakshatra": "400-word Moon nakshatra analysis"
 }}
 
-For each section, reference SPECIFIC placements from the chart data above. Do not write generic templates — write about THIS person's actual chart."""
+Return ONLY valid JSON. No markdown, no code fences, no extra text."""
 
     raw = await call_ai(prompt, max_tokens=8192, temperature=0.5)
     if not raw:
@@ -114,7 +112,6 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
     text = raw.strip()
 
     # Robust JSON extraction: strip markdown fences, find first { ... } block
-    import re
     cleaned = re.sub(r'```(?:json)?\s*\n?', '', text)
     cleaned = re.sub(r'\n?```\s*$', '', cleaned)
     cleaned = cleaned.strip()
@@ -122,7 +119,6 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
     try:
         sections = json.loads(cleaned)
     except json.JSONDecodeError:
-        # Try to extract the first JSON object from the text
         match = re.search(r'\{[\s\S]*\}', cleaned)
         if match:
             try:
@@ -135,7 +131,6 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
     # Fix double-encoded JSON: reasoning models sometimes wrap the entire
     # JSON response as a string inside {"overview": "<json_string>"}
     if isinstance(sections, dict):
-        # Case 1: Only has "overview" key and its value looks like JSON
         keys = list(sections.keys())
         if len(keys) == 1 and keys[0] == "overview" and isinstance(sections["overview"], str):
             inner = sections["overview"].strip()
@@ -143,7 +138,7 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
                 try:
                     sections = json.loads(inner)
                 except json.JSONDecodeError:
-                    pass  # Keep as-is, it's genuine overview text
+                    pass
 
     reading = {
         "sections": sections,
@@ -154,17 +149,55 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
     return {"status": "generated", "reading": reading}
 
 
-from fastapi.responses import Response
-
-
 @router.get("/reading/{chart_id}/pdf")
 async def get_reading_pdf(chart_id: str, lang: str = "ml", user_id: str = Depends(get_current_user_id)):
     cached = _get_cached(chart_id, lang)
     if not cached:
-        raise HTTPException(status_code=404, detail="Reading not generated yet. POST /reading/{id}/generate first.")
+        raise HTTPException(status_code=404, detail="Reading not generated yet")
 
-    chart = _fetch_chart(chart_id, user_id)
-    from app.services.pdf_generator import generate_reading_pdf
-    pdf_bytes = generate_reading_pdf(cached, chart, lang)
-    return Response(content=pdf_bytes, media_type="application/pdf",
-                    headers={"Content-Disposition": f"attachment; filename=reading-{chart_id}.pdf"})
+    sections = cached.get("sections", {})
+
+    # Build simple HTML for PDF
+    html_parts = ["<html><head><style>body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.8;color:#333}h1{color:#2d1b69;border-bottom:2px solid #6c3baf;padding-bottom:10px}h2{color:#6c3baf;margin-top:30px}p{margin:15px 0;text-align:justify}</style></head><body>"]
+
+    name = "Your"
+    try:
+        chart_data = _fetch_chart(chart_id, user_id)
+        name = chart_data.get("subject", {}).get("name", "Your") if isinstance(chart_data, dict) else "Your"
+    except Exception:
+        pass
+
+    html_parts.append(f"<h1>{name} Birth Chart Reading</h1>")
+
+    section_titles = {
+        "overview": "Life Overview",
+        "personality": "Personality",
+        "career": "Career & Purpose",
+        "love": "Love & Relationships",
+        "wealth": "Wealth & Finance",
+        "health": "Health & Wellbeing",
+        "spirituality": "Spirituality",
+        "challenges": "Challenges & Growth",
+        "nakshatra": "Nakshatra Analysis",
+    }
+
+    for key, title in section_titles.items():
+        content = sections.get(key, "")
+        if content:
+            html_parts.append(f"<h2>{title}</h2>")
+            paragraphs = content.split("\n\n") if "\n\n" in content else [content]
+            for p in paragraphs:
+                p = p.strip()
+                if p:
+                    html_parts.append(f"<p>{p}</p>")
+
+    html_parts.append("<hr><p><em>This reading is for entertainment and reflection only. AI-generated interpretations of astronomical data.</em></p>")
+    html_parts.append("</body></html>")
+
+    html = "\n".join(html_parts)
+
+    return Response(
+        content=html,
+        media_type="text/html",
+        headers={"Content-Disposition": f'inline; filename="astrology-report-{chart_id}.html"'},
+    )

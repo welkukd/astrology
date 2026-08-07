@@ -85,8 +85,8 @@ export default function ReadingPage() {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-813b.up.railway.app';
       const res = await fetch(`${backendUrl}/api/v1/reading/${chartId}/generate`, {
         method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ language: lang }),
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, force: true }),
       });
       if (!res.ok) throw new Error('Generation failed');
       const data = await res.json();
