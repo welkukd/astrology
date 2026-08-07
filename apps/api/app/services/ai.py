@@ -78,6 +78,14 @@ async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: floa
             logger.warning("OpenRouter returned empty content and no reasoning")
             raise ValueError("AI returned empty response — no content or reasoning field")
 
+    # Reasoning models may return double-escaped strings (\n, \")
+    # Detect and unescape them
+    if content and "\\n" in content[:100]:
+        try:
+            content = content.encode().decode('unicode_escape')
+        except Exception:
+            pass  # Not double-escaped, keep as-is
+
     return content
 
 

@@ -132,6 +132,19 @@ For each section, reference SPECIFIC placements from the chart data above. Do no
         else:
             sections = {"overview": raw}
 
+    # Fix double-encoded JSON: reasoning models sometimes wrap the entire
+    # JSON response as a string inside {"overview": "<json_string>"}
+    if isinstance(sections, dict):
+        # Case 1: Only has "overview" key and its value looks like JSON
+        keys = list(sections.keys())
+        if len(keys) == 1 and keys[0] == "overview" and isinstance(sections["overview"], str):
+            inner = sections["overview"].strip()
+            if inner.startswith("{"):
+                try:
+                    sections = json.loads(inner)
+                except json.JSONDecodeError:
+                    pass  # Keep as-is, it's genuine overview text
+
     reading = {
         "sections": sections,
         "dasha": dasha_data,
