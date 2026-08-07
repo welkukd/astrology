@@ -80,7 +80,10 @@ export default function ReadingPage() {
   const generateReading = useCallback(async (lang: 'ml' | 'en') => {
     setGenerating(true);
     try {
-      const res = await fetch(`/api/reading-v2/${chartId}/generate`, {
+      // Call Railway backend directly — Vercel Hobby has 10s serverless timeout,
+      // but AI generation takes 20-30s. Direct call bypasses that limit.
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-813b.up.railway.app';
+      const res = await fetch(`${backendUrl}/api/v1/reading/${chartId}/generate`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ language: lang }),
