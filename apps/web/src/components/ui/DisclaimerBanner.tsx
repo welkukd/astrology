@@ -10,7 +10,21 @@ export function DisclaimerBanner() {
 
   useEffect(() => {
     const saved = localStorage.getItem('disclaimer-dismissed');
-    if (saved) setDismissed(true);
+    if (saved) {
+      setDismissed(true);
+      return;
+    }
+    // Auto-hide after 7 days: track when first shown
+    const sessionKey = 'disclaimer-session-started';
+    const existing = localStorage.getItem(sessionKey);
+    if (!existing) {
+      localStorage.setItem(sessionKey, Date.now().toString());
+    } else {
+      const started = parseInt(existing, 10);
+      if (Date.now() - started > 7 * 24 * 60 * 60 * 1000) {
+        setDismissed(true);
+      }
+    }
   }, []);
 
   const handleDismiss = () => {

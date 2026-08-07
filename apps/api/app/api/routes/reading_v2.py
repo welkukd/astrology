@@ -156,17 +156,32 @@ async def get_reading_pdf(chart_id: str, lang: str = "ml", user_id: str = Depend
     if not cached:
         raise HTTPException(status_code=404, detail="Reading not generated yet")
 
+    chart_data = None
+    try:
+        chart_data = _fetch_chart(chart_id, user_id)
+    except Exception:
+        pass
+
+    # Try to generate a real PDF using weasyprint
+    try:
+        from app.services.pdf_generator import generate_reading_pdf
+        pdf_bytes = generate_reading_pdf(cached, chart_data or {}, lang)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="astrology-report-{chart_id}.pdf"'},
+        )
+    except Exception:
+        pass
+
+    # Fallback: return styled HTML if PDF generation fails
     sections = cached.get("sections", {})
 
-    # Build simple HTML for PDF
     html_parts = ["<html><head><style>body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.8;color:#333}h1{color:#2d1b69;border-bottom:2px solid #6c3baf;padding-bottom:10px}h2{color:#6c3baf;margin-top:30px}p{margin:15px 0;text-align:justify}</style></head><body>"]
 
     name = "Your"
-    try:
-        chart_data = _fetch_chart(chart_id, user_id)
-        name = chart_data.get("subject", {}).get("name", "Your") if isinstance(chart_data, dict) else "Your"
-    except Exception:
-        pass
+    if chart_data and isinstance(chart_data, dict):
+        name = chart_data.get("subject", {}).get("name", "Your")
 
     html_parts.append(f"<h1>{name} Birth Chart Reading</h1>")
 

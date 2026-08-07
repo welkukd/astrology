@@ -168,6 +168,25 @@ def _handle_subscription_cancel(supabase, sub):
     }).eq("stripe_customer_id", customer_id).execute()
 
 
+@router.get("/prices")
+async def get_prices():
+    """Return Stripe price IDs for the pricing page."""
+    return {
+        "monthly": {
+            "price_id": PRICE_PRO_MONTHLY,
+            "amount": 499,
+            "currency": "usd",
+            "interval": "month",
+        },
+        "lifetime": {
+            "price_id": PRICE_LIFETIME,
+            "amount": 2999,
+            "currency": "usd",
+            "interval": None,
+        },
+    }
+
+
 @router.get("/status")
 async def get_billing_status(user_id: str = Depends(get_current_user_id)):
     supabase = get_supabase_client()

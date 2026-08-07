@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Star, Zap, Crown, Sparkles, Loader2 } from 'lucide-react';
@@ -26,7 +26,7 @@ const TIERS = [
     cta: 'Get Started Free',
     ctaHref: '/chart/new',
     highlighted: false,
-    priceId: null,
+    priceKey: null,
     mode: null,
   },
   {
@@ -49,7 +49,7 @@ const TIERS = [
     cta: 'Start Pro',
     ctaHref: null,
     highlighted: true,
-    priceId: 'STRIPE_PRICE_PRO_MONTHLY',
+    priceKey: 'pro_monthly',
     mode: 'subscription',
   },
   {
@@ -69,7 +69,7 @@ const TIERS = [
     cta: 'Get Lifetime',
     ctaHref: null,
     highlighted: false,
-    priceId: 'STRIPE_PRICE_LIFETIME',
+    priceKey: 'lifetime',
     mode: 'payment',
   },
 ];
@@ -102,6 +102,18 @@ export default function PricingPage() {
   const router = useRouter();
   const { session } = useAuth();
   const [loading, setLoading] = useState<string | null>(null);
+  const [prices, setPrices] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('/api/billing/prices')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.prices) setPrices(data.prices);
+      })
+      .catch(() => {
+        // Prices failed to load — checkout will show error
+      });
+  }, []);
 
   const handleCheckout = async (tier: typeof TIERS[0]) => {
     if (!session) {
@@ -115,7 +127,8 @@ export default function PricingPage() {
     }
 
     // Stripe checkout
-    if (!tier.priceId || !tier.mode) return;
+    const priceId = tier.priceKey ? prices[tier.priceKey] : null;
+    if (!priceId || !tier.mode) return;
 
     setLoading(tier.name);
     try {
@@ -126,7 +139,7 @@ export default function PricingPage() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          price_id: tier.priceId,
+          price_id: priceId,
           mode: tier.mode,
         }),
       });

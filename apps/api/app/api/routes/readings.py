@@ -1,3 +1,22 @@
+# =============================================================================
+# DEPRECATED — v1 Reading Routes (DO NOT REMOVE — part of API contract)
+# =============================================================================
+# These endpoints are superseded by reading_v2 routes. The frontend no longer
+# calls any of these endpoints:
+#   POST /v1/reading/full
+#   POST /v1/reading/yearly
+#   POST /v1/reading/monthly
+#   POST /v1/reading/dasha
+#   POST /v1/reading/transits
+#
+# The frontend exclusively uses the v2 reading endpoints via:
+#   /api/v1/reading/{chart_id}          (GET — read existing)
+#   /api/v1/reading/{chart_id}/generate (POST — generate new)
+#
+# This router is kept for backward compatibility with any external consumers
+# of the API. Do NOT delete until the API contract is formally versioned out.
+# =============================================================================
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional

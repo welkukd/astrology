@@ -1,3 +1,8 @@
+/**
+ * @deprecated This proxy route is no longer used. The reading page's generateReading()
+ * function calls the Railway backend directly to avoid Vercel's 10s timeout limit.
+ * Safe to delete.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-813b.up.railway.app';

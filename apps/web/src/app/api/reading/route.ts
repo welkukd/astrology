@@ -1,3 +1,20 @@
+/**
+ * @deprecated This proxy route is no longer used. The reading page now calls the
+ * Railway backend directly for all reading operations to avoid Vercel's 10s timeout limit.
+ * Safe to delete.
+ */
+// =============================================================================
+// DEPRECATED — v1 Reading Proxy (DO NOT REMOVE — kept for API contract)
+// =============================================================================
+// This route is superseded by reading-v2 route.ts. The frontend no longer
+// calls this endpoint. All frontend code now uses:
+//   GET  /api/reading-v2/[chart_id]
+//   POST /api/reading-v2/[chart_id]/generate
+//   GET  /api/reading-v2/[chart_id]/pdf
+//
+// Do NOT delete until the v1 API contract is formally versioned out.
+// =============================================================================
+
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('your-backend'))

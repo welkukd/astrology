@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
-import { Moon, Star, Sparkles, Calendar, Clock, ArrowLeft, Loader2, ChevronDown, ChevronRight, FileDown, Globe } from 'lucide-react';
+import { Moon, Star, Sparkles, Calendar, Clock, ArrowLeft, Loader2, ChevronDown, ChevronRight, FileDown, Globe, AlertTriangle } from 'lucide-react';
 import { cn, getSignEmoji, getPlanetEmoji } from '@/lib/utils';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
 
@@ -63,11 +63,13 @@ export default function ReadingPage() {
   const [activeTab, setActiveTab] = useState('full');
   const [expandedDasha, setExpandedDasha] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const authHeaders = () => ({
+  const token = session?.access_token;
+  const authHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session?.access_token}`,
-  });
+    Authorization: `Bearer ${token}`,
+  }), [token]);
 
   const fetchReading = useCallback(async (lang: 'ml' | 'en') => {
     const res = await fetch(`/api/reading-v2/${chartId}?lang=${lang}`, { headers: authHeaders() });
@@ -101,10 +103,11 @@ export default function ReadingPage() {
       if (data.reading) setReading(data.reading as ReadingData);
     } catch (e) {
       console.error('Generation error:', e);
+      setError(e instanceof Error ? e.message : 'Failed to generate reading. Please try again.');
     } finally {
       setGenerating(false);
     }
-  }, [chartId, session]);
+  }, [chartId, session?.access_token]);
 
   // Use a ref to prevent re-running the initial load on every session refresh
   const hasLoaded = useRef(false);
@@ -154,11 +157,16 @@ export default function ReadingPage() {
     try {
       const res = await fetch(`/api/reading-v2/${chartId}/pdf?lang=${language}`, { headers: authHeaders() });
       if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `astrology-report-${chartId}.pdf`;
+        if (contentType.includes('application/pdf')) {
+          a.download = `astrology-report-${chartId}.pdf`;
+        } else {
+          a.download = `astrology-report-${chartId}.html`;
+        }
         a.click();
         window.URL.revokeObjectURL(url);
       }
@@ -249,6 +257,27 @@ export default function ReadingPage() {
             <p className="text-gray-400 text-sm mt-1">
               {language === 'ml' ? '~20 സെക്കൻഡ് എടുക്കും' : 'This takes ~20 seconds'}
             </p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {!generating && error && !reading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 max-w-md text-center">
+              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
+                {language === 'ml' ? 'വായന തയ്യാറാക്കാൻ കഴിഞ്ഞില്ല' : 'Could not generate reading'}
+              </h3>
+              <p className="text-sm text-red-600 dark:text-red-300 mb-6">
+                {error}
+              </p>
+              <button
+                onClick={() => { setError(null); generateReading(language); }}
+                className="px-6 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                {language === 'ml' ? 'വീണ്ടും ശ്രമിക്കുക' : 'Try Again'}
+              </button>
+            </div>
           </div>
         )}
 

@@ -1,26 +1,10 @@
-'use client';
-
-import Link from 'next/link';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <DisclaimerBanner />
-      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4 h-16">
-            <Link href="/" className="flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-semibold">Home</span>
-            </Link>
-            <span className="text-gray-400">/</span>
-            <span className="font-medium text-gray-900 dark:text-white">Terms of Service</span>
-          </div>
-        </div>
-      </nav>
-
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center gap-3 mb-8">
           <FileText className="h-8 w-8 text-primary-600 dark:text-primary-400" />
@@ -90,6 +74,14 @@ export default function TermsPage() {
           </section>
         </div>
       </div>
+
+      <footer className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 py-8 mt-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            &copy; {new Date().getFullYear()} Astrology Assistant. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

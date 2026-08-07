@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
 import { Moon, Plus, Loader2, Calendar, Trash2, BookOpen, Star, CreditCard, Zap, Crown, ExternalLink } from 'lucide-react';
@@ -23,43 +23,66 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [portalError, setPortalError] = useState<string | null>(null);
+
+  // Use a ref to prevent re-running the initial load on every session refresh
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     if (authLoading) return;
     if (!session) return;
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
     fetchCharts();
     fetchBilling();
   }, [session, authLoading]);
 
   const fetchCharts = async () => {
     try {
+      setFetchError(null);
       const res = await fetch('/api/charts', {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (res.ok) setCharts(await res.json());
-    } catch {}
+      else setFetchError('Failed to load charts. Please try again.');
+    } catch {
+      setFetchError('Failed to load charts. Please try again.');
+    }
     finally { setLoading(false); }
   };
 
   const fetchBilling = async () => {
     try {
+      setFetchError(null);
       const res = await fetch('/api/billing/status', {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (res.ok) setBilling(await res.json());
-    } catch {}
+      else setFetchError('Failed to load billing info. Please try again.');
+    } catch {
+      setFetchError('Failed to load billing info. Please try again.');
+    }
   };
 
   const openPortal = async () => {
     setPortalLoading(true);
+    setPortalError(null);
     try {
       const res = await fetch('/api/billing/portal', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
+      if (!res.ok) {
+        setPortalError('Could not open billing portal. Please try again.');
+        return;
+      }
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-    } catch {}
+      else setPortalError('Could not open billing portal. Please try again.');
+    } catch {
+      setPortalError('Could not open billing portal. Please try again.');
+    }
     finally { setPortalLoading(false); }
   };
 
