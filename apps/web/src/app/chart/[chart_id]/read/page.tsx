@@ -73,9 +73,17 @@ export default function ReadingPage() {
     const res = await fetch(`/api/reading-v2/${chartId}?lang=${lang}`, { headers: authHeaders() });
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.status === 'cached' && data.reading) return data.reading as ReadingData;
+    if (data.status === 'cached' && data.reading) {
+      // Check if cached reading has the correct format (multiple sections)
+      const sections = data.reading?.sections;
+      if (sections && typeof sections === 'object' && Object.keys(sections).length > 2) {
+        return data.reading as ReadingData;
+      }
+      // Bad format (double-encoded) — return null to trigger regeneration
+      return null;
+    }
     return null;
-  }, [chartId, session]);
+  }, [chartId, authHeaders]);
 
   const generateReading = useCallback(async (lang: 'ml' | 'en') => {
     setGenerating(true);
