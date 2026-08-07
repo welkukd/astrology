@@ -109,6 +109,8 @@ Respond ONLY with valid JSON (no markdown, no code fences) in this exact structu
 For each section, reference SPECIFIC placements from the chart data above. Do not write generic templates — write about THIS person's actual chart."""
 
     raw = await call_ai(prompt, max_tokens=8192, temperature=0.5)
+    if not raw:
+        raise HTTPException(status_code=502, detail="AI returned empty response")
     text = raw.strip()
 
     # Robust JSON extraction: strip markdown fences, find first { ... } block

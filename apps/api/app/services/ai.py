@@ -1,8 +1,10 @@
 import json
 import httpx
+import logging
 
 from app.core.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
@@ -42,7 +44,8 @@ async def call_gemini_json(prompt: str, max_tokens: int = 8192) -> dict:
 
 
 async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: float = 0.3) -> str:
-    """Call OpenCode Zen (OpenAI-compatible) with free models."""
+    """Call OpenCode Zen (OpenAI-compatible) with free models.
+    Handles reasoning models that put output in 'reasoning' field."""
     base = settings.OPENROUTER_BASE_URL or "https://opencode.ai/zen/v1"
     url = f"{base}/chat/completions"
     headers = {
@@ -55,11 +58,27 @@ async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: floa
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
-        return data["choices"][0]["message"]["content"]
+
+    message = data["choices"][0]["message"]
+    content = message.get("content")
+
+    # Reasoning models (e.g. mimo-v2.5-free) return content=null
+    # and put the actual output in the "reasoning" field
+    if not content:
+        reasoning = message.get("reasoning")
+        if reasoning:
+            logger.info("OpenRouter returned reasoning-only response, using reasoning field")
+            content = reasoning
+        else:
+            # Last resort: stringify the whole response
+            logger.warning("OpenRouter returned empty content and no reasoning")
+            raise ValueError("AI returned empty response — no content or reasoning field")
+
+    return content
 
 
 async def call_ai(prompt: str, max_tokens: int = 8192, temperature: float = 0.4) -> str:
