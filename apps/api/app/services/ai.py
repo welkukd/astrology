@@ -81,9 +81,9 @@ async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: floa
     # Reasoning models may return double-escaped strings (\\n, \\, \")
     # Detect and unescape them with a targeted approach that preserves
     # non-ASCII characters (Malayalam, Hindi, etc.) unlike .encode().decode('unicode_escape')
-    if content and '\\n' in content[:100]:
+    if content and '\n' in content[:100]:
         import re as _re
-        _ESCAPE_RE = _re.compile(r'\\\\|\\n|\\t|\\r|\\"|\\u([0-9a-fA-F]{4})')
+        _ESCAPE_RE = _re.compile(r'\\\\|\\n|\\t|\\r|\"|\\u([0-9a-fA-F]{4})')
         _ESCAPE_MAP = {'\\\\': '\\', '\\n': '\n', '\\t': '\t', '\\r': '\r', '\\"': '"'}
         def _unescape(m):
             if m.group(1):

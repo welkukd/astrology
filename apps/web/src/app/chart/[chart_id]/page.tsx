@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
@@ -24,27 +24,22 @@ export default function ChartPage() {
   const [answer, setAnswer] = useState('');
   const [chartStyle, setChartStyle] = useState<'western' | 'vedic'>('western');
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!session) { router.push('/auth/login'); return; }
-    fetchChart();
-  }, [chartId, session, authLoading, router]);
-
-  const authHeaders = () => ({
+  const token = session?.access_token;
+  const authHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session?.access_token}`,
-  });
+    Authorization: `Bearer ${token}`,
+  }), [token]);
 
-  const fetchChart = async () => {
+  const fetchChart = useCallback(async () => {
     try {
       const res = await fetch(`/api/charts/${chartId}`, { headers: authHeaders() });
       if (!res.ok) { router.push('/chart/new'); return; }
       setChart(await res.json());
     } catch { router.push('/chart/new'); }
     finally { setLoading(false); }
-  };
+  }, [chartId, authHeaders, router]);
 
-  const interpret = async (type: string, context: any = {}) => {
+  const interpret = useCallback(async (type: string, context: any = {}) => {
     setInterpreting(type);
     try {
       const res = await fetch('/api/interpret', {
@@ -55,11 +50,11 @@ export default function ChartPage() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setInterpretations(prev => ({ ...prev, [type]: data.content }));
-    } catch { /* */ }
+    } catch { console.error('Interpret error:', type); }
     finally { setInterpreting(null); }
-  };
+  }, [chartId, authHeaders]);
 
-  const askQuestion = async () => {
+  const askQuestion = useCallback(async () => {
     if (!question.trim()) return;
     setInterpreting('question');
     try {
@@ -70,20 +65,32 @@ export default function ChartPage() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setAnswer(data.content);
-    } catch { /* */ }
+    } catch { console.error('Question error'); }
     finally { setInterpreting(null); }
-  };
+  }, [chartId, authHeaders, question]);
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     try {
       const res = await fetch(`/api/charts/${chartId}/export`, { method: 'POST', headers: authHeaders() });
+      if (!res.ok) { console.error('Export failed:', res.status); return; }
       const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `chart-${chartId}.json`; a.click();
       URL.revokeObjectURL(url);
-    } catch {}
-  };
+    } catch (e) { console.error('Export error:', e); }
+  }, [chartId, authHeaders]);
+
+  // Use a ref to prevent re-running the initial load on every session refresh
+  const hasLoaded = useRef(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) { router.push('/auth/login'); return; }
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
+    fetchChart();
+  }, [chartId, session, authLoading, router, fetchChart]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary-600" /></div>;
   if (!chart) return null;
