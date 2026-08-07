@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/providers';
@@ -98,9 +98,14 @@ export default function ReadingPage() {
     }
   }, [chartId, session]);
 
+  // Use a ref to prevent re-running the initial load on every session refresh
+  const hasLoaded = useRef(false);
+
   useEffect(() => {
     if (authLoading) return;
     if (!session) { router.push('/auth/login'); return; }
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
     (async () => {
       setLoading(true);
@@ -123,7 +128,7 @@ export default function ReadingPage() {
       }
       setLoading(false);
     })();
-  }, [chartId, session, authLoading, router]);
+  }, [chartId, authLoading, router]);
 
   const switchLanguage = async (lang: 'ml' | 'en') => {
     setLanguage(lang);
