@@ -10,21 +10,34 @@ type AuthContextType = {
   loading: boolean;
 };
 
-const AuthContext = createContext<AuthContextType>({ session: null, supabase: null, loading: false });
+const AuthContext = createContext<AuthContextType>({ session: null, supabase: null, loading: true });
 
-export function Providers({ children }: { children: React.ReactNode }) {
+// Module-level singleton to prevent multiple GoTrueClient instances
+let sharedSupabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient | null {
+  if (sharedSupabase) return sharedSupabase;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  sharedSupabase = createSupabaseClient(url, key, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  });
+  return sharedSupabase;
+}
 
-  const [supabase] = useState(() => (url && key ? createSupabaseClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null));
+export function Providers({ children }: { children: React.ReactNode }) {
+  const [supabase] = useState(() => getSupabase());
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(!!supabase);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
 
