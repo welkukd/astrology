@@ -6,7 +6,7 @@ from typing import Optional
 class Settings(BaseSettings):
     APP_NAME: str = "Astrology API"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
