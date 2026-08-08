@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Star, Zap, Crown, Sparkles, Loader2 } from 'lucide-react';
+import { Check, Star, Zap, Crown, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '@/app/providers';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
 
@@ -158,18 +157,6 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <DisclaimerBanner />
-      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4 h-16">
-            <Link href="/" className="flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-semibold">Home</span>
-            </Link>
-            <span className="text-gray-400">/</span>
-            <span className="font-medium text-gray-900 dark:text-white">Pricing</span>
-          </div>
-        </div>
-      </nav>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-14">
