@@ -76,12 +76,16 @@ export default function ReadingPage() {
     if (!res.ok) return null;
     const data = await res.json();
     if (data.status === 'cached' && data.reading) {
-      // Check if cached reading has the correct format (multiple sections)
+      // Check if cached reading has the correct format (multiple sections with clean text)
       const sections = data.reading?.sections;
       if (sections && typeof sections === 'object' && Object.keys(sections).length > 2) {
-        return data.reading as ReadingData;
+        // Also check that values are clean text, not raw JSON/markdown
+        const firstVal = Object.values(sections)[0];
+        if (typeof firstVal === 'string' && !firstVal.includes('```json') && !firstVal.includes('\\n') && !firstVal.startsWith('{')) {
+          return data.reading as ReadingData;
+        }
       }
-      // Bad format (double-encoded) — return null to trigger regeneration
+      // Bad format (double-encoded, markdown fences, etc) — return null to trigger regeneration
       return null;
     }
     return null;
