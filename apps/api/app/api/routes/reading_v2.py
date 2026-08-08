@@ -131,15 +131,46 @@ Return ONLY valid JSON. No markdown, no code fences, no extra text."""
 
     # Fix double-encoded JSON: reasoning models sometimes wrap the entire
     # JSON response as a string inside {"overview": "<json_string>"}
+    # The inner string may also have markdown code fences or escaped characters
     if isinstance(sections, dict):
         keys = list(sections.keys())
         if len(keys) == 1 and keys[0] == "overview" and isinstance(sections["overview"], str):
             inner = sections["overview"].strip()
+            # Strip markdown code fences from the inner string
+            inner = re.sub(r'^```(?:json)?\s*\n?', '', inner)
+            inner = re.sub(r'\n?```\s*$', '', inner)
+            inner = inner.strip()
             if inner.startswith("{"):
                 try:
                     sections = json.loads(inner)
                 except json.JSONDecodeError:
                     pass
+        # Also fix: if multiple keys exist but values are JSON strings containing
+        # the full response (e.g. {"overview": "{\"overview\":...}"})
+        elif len(keys) > 1:
+            first_val = sections.get(list(sections.keys())[0])
+            if isinstance(first_val, str) and first_val.strip().startswith(("{", "```")):
+                inner = first_val.strip()
+                inner = re.sub(r'^```(?:json)?\s*\n?', '', inner)
+                inner = re.sub(r'\n?```\s*$', '', inner)
+                inner = inner.strip()
+                if inner.startswith("{"):
+                    try:
+                        parsed = json.loads(inner)
+                        if isinstance(parsed, dict) and len(parsed) > len(sections):
+                            sections = parsed
+                    except json.JSONDecodeError:
+                        pass
+
+    # Unescape escaped characters in section values (from reasoning model double-encoding)
+    # The AI returns \\n, \\\" etc as literal characters that need to be converted
+    if isinstance(sections, dict):
+        for key in sections:
+            val = sections[key]
+            if isinstance(val, str):
+                # Unescape common JSON string escapes without destroying non-ASCII
+                val = val.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"').replace('\\/', '/')
+                sections[key] = val
 
     reading = {
         "sections": sections,
