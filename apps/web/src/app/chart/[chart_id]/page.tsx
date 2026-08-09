@@ -120,6 +120,10 @@ export default function ChartPage() {
             <BookOpen className="h-4 w-4" />
             Get Reading
           </Link>
+          <Link href={`/chart/${chartId}/chat`} className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-500/30 transition-colors text-sm font-medium">
+            <MessageSquare className="h-4 w-4" />
+            Chat with Astrologer
+          </Link>
           <button onClick={handleExport} className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Export JSON"><Download className="h-5 w-5" /></button>
         </div>
 
