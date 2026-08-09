@@ -78,6 +78,12 @@ def _save_cache(chart_id: str, language: str, reading_data: dict):
     }, on_conflict="chart_id,type,language").execute()
 
 
+@router.get("/reading/languages")
+async def get_supported_languages():
+    """Return list of supported languages for translation."""
+    return {"languages": SUPPORTED_LANGUAGES}
+
+
 @router.get("/reading/{chart_id}")
 async def get_reading(chart_id: str, force: bool = False, user_id: str = Depends(get_current_user_id)):
     """Get reading — always returns English. Frontend handles translation."""
@@ -247,12 +253,6 @@ Return ONLY valid JSON with the same keys. No markdown, no code fences."""
             raise HTTPException(status_code=500, detail="Translation parse failed")
 
     return {"status": "translated", "sections": translated}
-
-
-@router.get("/reading/languages")
-async def get_supported_languages():
-    """Return list of supported languages for translation."""
-    return {"languages": SUPPORTED_LANGUAGES}
 
 
 @router.get("/reading/{chart_id}/pdf")
