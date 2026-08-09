@@ -1,4 +1,5 @@
 import json
+import re
 import httpx
 import logging
 
@@ -43,8 +44,37 @@ async def call_gemini_json(prompt: str, max_tokens: int = 8192) -> dict:
     return json.loads(text)
 
 
+async def _unescape_openrouter(content: str) -> str:
+    """Unescape double-escaped strings from reasoning models.
+    Preserves non-ASCII characters (Malayalam, Hindi, etc.)."""
+    if content and '\\n' in content[:100]:
+        _ESCAPE_RE = re.compile(r'\\\\\\\\|\\\\n|\\\\t|\\\\r|\\"|\\\\u([0-9a-fA-F]{4})')
+        _ESCAPE_MAP = {'\\\\\\\\': '\\', '\\\\n': '\n', '\\\\t': '\t', '\\\\r': '\r', '\\"': '"'}
+
+        def _unescape(m):
+            if m.group(1):
+                return chr(int(m.group(1), 16))
+            return _ESCAPE_MAP.get(m.group(0), m.group(0))
+
+        try:
+            content = _ESCAPE_RE.sub(_unescape, content)
+        except Exception:
+            pass  # Not double-escaped, keep as-is
+    return content
+
+
 async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: float = 0.3) -> str:
     """Call OpenCode Zen (OpenAI-compatible) with free models.
+    Handles reasoning models that put output in 'reasoning' field."""
+    return await call_openrouter_chat(
+        [{"role": "user", "content": prompt}],
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+
+
+async def call_openrouter_chat(messages: list[dict], max_tokens: int = 2000, temperature: float = 0.3) -> str:
+    """Call OpenCode Zen (OpenAI-compatible) with a multi-message conversation.
     Handles reasoning models that put output in 'reasoning' field."""
     base = settings.OPENROUTER_BASE_URL or "https://opencode.ai/zen/v1"
     url = f"{base}/chat/completions"
@@ -54,7 +84,7 @@ async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: floa
     }
     payload = {
         "model": settings.OPENROUTER_MODEL or "mimo-v2.5-free",
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
@@ -78,23 +108,25 @@ async def call_openrouter(prompt: str, max_tokens: int = 2000, temperature: floa
             logger.warning("OpenRouter returned empty content and no reasoning")
             raise ValueError("AI returned empty response — no content or reasoning field")
 
-    # Reasoning models may return double-escaped strings (\\n, \\, \")
-    # Detect and unescape them with a targeted approach that preserves
-    # non-ASCII characters (Malayalam, Hindi, etc.) unlike .encode().decode('unicode_escape')
-    if content and '\n' in content[:100]:
-        import re as _re
-        _ESCAPE_RE = _re.compile(r'\\\\|\\n|\\t|\\r|\"|\\u([0-9a-fA-F]{4})')
-        _ESCAPE_MAP = {'\\\\': '\\', '\\n': '\n', '\\t': '\t', '\\r': '\r', '\\"': '"'}
-        def _unescape(m):
-            if m.group(1):
-                return chr(int(m.group(1), 16))
-            return _ESCAPE_MAP.get(m.group(0), m.group(0))
-        try:
-            content = _ESCAPE_RE.sub(_unescape, content)
-        except Exception:
-            pass  # Not double-escaped, keep as-is
-
+    content = await _unescape_openrouter(content)
     return content
+
+
+async def call_gemini_chat(messages: list[dict], max_tokens: int = 8192, temperature: float = 0.4) -> str:
+    """Call Gemini with a multi-message conversation.
+    Gemini doesn't support multi-message natively, so flatten to a single prompt."""
+    parts = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        if role == "system":
+            parts.append(f"System: {content}")
+        elif role == "assistant":
+            parts.append(f"Assistant: {content}")
+        else:
+            parts.append(content)
+    combined = "\n\n".join(parts)
+    return await call_gemini(combined, max_tokens=max_tokens, temperature=temperature)
 
 
 async def call_ai(prompt: str, max_tokens: int = 8192, temperature: float = 0.4) -> str:
@@ -103,6 +135,14 @@ async def call_ai(prompt: str, max_tokens: int = 8192, temperature: float = 0.4)
     if provider == "openrouter":
         return await call_openrouter(prompt, max_tokens=max_tokens, temperature=temperature)
     return await call_gemini(prompt, max_tokens=max_tokens, temperature=temperature)
+
+
+async def call_ai_chat(messages: list[dict], max_tokens: int = 4096, temperature: float = 0.7) -> str:
+    """Route a multi-message conversation to the configured AI provider."""
+    provider = settings.AI_PROVIDER or "gemini"
+    if provider == "openrouter":
+        return await call_openrouter_chat(messages, max_tokens=max_tokens, temperature=temperature)
+    return await call_gemini_chat(messages, max_tokens=max_tokens, temperature=temperature)
 
 
 async def call_ai_json(prompt: str, max_tokens: int = 8192) -> dict:

@@ -10,8 +10,8 @@ export async function GET(
   const auth = request.headers.get('authorization');
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const lang = request.nextUrl.searchParams.get('lang') || 'ml';
-  const res = await fetch(`${BACKEND}/api/v1/reading/${chart_id}?lang=${lang}`, {
+  const force = request.nextUrl.searchParams.get('force') || 'false';
+  const res = await fetch(`${BACKEND}/api/v1/reading/${chart_id}?force=${force}`, {
     headers: { Authorization: auth },
   });
 

@@ -3,6 +3,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from pydantic import BaseModel
+from typing import Optional
 
 from app.core.security import get_current_user_id
 from app.core.database import get_supabase_client
@@ -12,16 +13,38 @@ from app.services.dasha import calculate_dasha
 
 router = APIRouter(prefix="/v1", tags=["reading-v2"])
 
+# Supported languages for on-demand translation
+SUPPORTED_LANGUAGES = {
+    "en": "English",
+    "ml": "Malayalam (മലയാളം)",
+    "ta": "Tamil (தமிழ்)",
+    "hi": "Hindi (हिन्दी)",
+    "te": "Telugu (తెలుగు)",
+    "kn": "Kannada (ಕನ್ನಡ)",
+    "bn": "Bengali (বাংলা)",
+    "mr": "Marathi (मराठी)",
+    "gu": "Gujarati (ગુજરાતી)",
+    "pa": "Punjabi (ਪੰਜਾਬੀ)",
+    "ur": "Urdu (اردو)",
+    "ar": "Arabic (العربية)",
+    "es": "Spanish (Español)",
+    "fr": "French (Français)",
+    "de": "German (Deutsch)",
+    "pt": "Portuguese (Português)",
+    "ja": "Japanese (日本語)",
+    "ko": "Korean (한국어)",
+    "zh": "Chinese (中文)",
+}
+
 
 class GenerateRequest(BaseModel):
-    language: str = "ml"  # "ml" or "en"
     force: bool = False   # True = skip cache, regenerate
 
 
-LANGUAGE_INSTRUCTION = {
-    "ml": "Write the ENTIRE response in Malayalam (മലയാളം). Use proper Malayalam astrological terminology. Do not use any English words except planet names.",
-    "en": "Write the ENTIRE response in English.",
-}
+class TranslateRequest(BaseModel):
+    sections: dict  # The English sections to translate
+    target_language: str  # Target language code
+
 
 def _fetch_chart(chart_id: str, user_id: str) -> dict:
     supabase = get_supabase_client()
@@ -32,7 +55,7 @@ def _fetch_chart(chart_id: str, user_id: str) -> dict:
     return result.data["chart_data"]
 
 
-def _get_cached(chart_id: str, language: str) -> dict | None:
+def _get_cached(chart_id: str, language: str = "en") -> dict | None:
     supabase = get_supabase_client()
     result = supabase.table("interpretations").select("reading_data") \
         .eq("chart_id", chart_id).eq("type", "full_v2") \
@@ -56,10 +79,11 @@ def _save_cache(chart_id: str, language: str, reading_data: dict):
 
 
 @router.get("/reading/{chart_id}")
-async def get_reading(chart_id: str, lang: str = "ml", force: bool = False, user_id: str = Depends(get_current_user_id)):
+async def get_reading(chart_id: str, force: bool = False, user_id: str = Depends(get_current_user_id)):
+    """Get reading — always returns English. Frontend handles translation."""
     _fetch_chart(chart_id, user_id)
     if not force:
-        cached = _get_cached(chart_id, lang)
+        cached = _get_cached(chart_id, "en")
         if cached:
             return {"status": "cached", "reading": cached}
     return {"status": "not_generated"}
@@ -67,12 +91,10 @@ async def get_reading(chart_id: str, lang: str = "ml", force: bool = False, user
 
 @router.post("/reading/{chart_id}/generate")
 async def generate_reading(chart_id: str, req: GenerateRequest, user_id: str = Depends(get_current_user_id)):
-    lang = req.language if req.language in ("ml", "en") else "ml"
-    lang_inst = LANGUAGE_INSTRUCTION[lang]
-
+    """Generate reading — ALWAYS in English. Saves tokens, clean output."""
     # Check cache first (unless force=true)
     if not req.force:
-        cached = _get_cached(chart_id, lang)
+        cached = _get_cached(chart_id, "en")
         if cached:
             return {"status": "cached", "reading": cached}
 
@@ -90,7 +112,7 @@ async def generate_reading(chart_id: str, req: GenerateRequest, user_id: str = D
 
 {context}
 
-{lang_inst}
+Write the ENTIRE response in English.
 
 Write your response as a JSON object with these keys (ALL values must be strings):
 {{
@@ -131,12 +153,10 @@ Return ONLY valid JSON. No markdown, no code fences, no extra text."""
 
     # Fix double-encoded JSON: reasoning models sometimes wrap the entire
     # JSON response as a string inside {"overview": "<json_string>"}
-    # The inner string may also have markdown code fences or escaped characters
     if isinstance(sections, dict):
         keys = list(sections.keys())
         if len(keys) == 1 and keys[0] == "overview" and isinstance(sections["overview"], str):
             inner = sections["overview"].strip()
-            # Strip markdown code fences from the inner string
             inner = re.sub(r'^```(?:json)?\s*\n?', '', inner)
             inner = re.sub(r'\n?```\s*$', '', inner)
             inner = inner.strip()
@@ -145,8 +165,6 @@ Return ONLY valid JSON. No markdown, no code fences, no extra text."""
                     sections = json.loads(inner)
                 except json.JSONDecodeError:
                     pass
-        # Also fix: if multiple keys exist but values are JSON strings containing
-        # the full response (e.g. {"overview": "{\"overview\":...}"})
         elif len(keys) > 1:
             first_val = sections.get(list(sections.keys())[0])
             if isinstance(first_val, str) and first_val.strip().startswith(("{", "```")):
@@ -162,13 +180,11 @@ Return ONLY valid JSON. No markdown, no code fences, no extra text."""
                     except json.JSONDecodeError:
                         pass
 
-    # Unescape escaped characters in section values (from reasoning model double-encoding)
-    # The AI returns \\n, \\\" etc as literal characters that need to be converted
+    # Unescape escaped characters in section values
     if isinstance(sections, dict):
         for key in sections:
             val = sections[key]
             if isinstance(val, str):
-                # Unescape common JSON string escapes without destroying non-ASCII
                 val = val.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"').replace('\\/', '/')
                 sections[key] = val
 
@@ -177,12 +193,70 @@ Return ONLY valid JSON. No markdown, no code fences, no extra text."""
         "dasha": dasha_data,
     }
 
-    _save_cache(chart_id, lang, reading)
+    _save_cache(chart_id, "en", reading)
     return {"status": "generated", "reading": reading}
 
 
+@router.post("/reading/translate")
+async def translate_reading(req: TranslateRequest, user_id: str = Depends(get_current_user_id)):
+    """Translate English reading sections to target language on demand.
+    Uses AI to translate — much cheaper than regenerating the whole reading."""
+    if req.target_language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(status_code=400, detail=f"Language '{req.target_language}' not supported. Supported: {', '.join(SUPPORTED_LANGUAGES.keys())}")
+
+    if req.target_language == "en":
+        return {"status": "translated", "sections": req.sections}
+
+    lang_name = SUPPORTED_LANGUAGES[req.target_language]
+
+    # Build a single translation prompt for all sections
+    sections_text = ""
+    for key, value in req.sections.items():
+        if isinstance(value, str):
+            sections_text += f"\n=== {key.upper()} ===\n{value}\n"
+
+    prompt = f"""Translate the following astrology reading from English to {lang_name}.
+Preserve the meaning, tone, and astrological terminology accurately.
+Use proper astrological terms in {lang_name} where they exist.
+Keep planet names in English (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu).
+Return a JSON object with the same keys, each value being the translated text.
+
+{sections_text}
+
+Return ONLY valid JSON with the same keys. No markdown, no code fences."""
+
+    raw = await call_ai(prompt, max_tokens=8192, temperature=0.3)
+    if not raw:
+        raise HTTPException(status_code=502, detail="Translation failed")
+
+    text = raw.strip()
+    cleaned = re.sub(r'```(?:json)?\s*\n?', '', text)
+    cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+    cleaned = cleaned.strip()
+
+    try:
+        translated = json.loads(cleaned)
+    except json.JSONDecodeError:
+        match = re.search(r'\{[\s\S]*\}', cleaned)
+        if match:
+            try:
+                translated = json.loads(match.group())
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=500, detail="Translation parse failed")
+        else:
+            raise HTTPException(status_code=500, detail="Translation parse failed")
+
+    return {"status": "translated", "sections": translated}
+
+
+@router.get("/reading/languages")
+async def get_supported_languages():
+    """Return list of supported languages for translation."""
+    return {"languages": SUPPORTED_LANGUAGES}
+
+
 @router.get("/reading/{chart_id}/pdf")
-async def get_reading_pdf(chart_id: str, lang: str = "ml", user_id: str = Depends(get_current_user_id)):
+async def get_reading_pdf(chart_id: str, lang: str = "en", user_id: str = Depends(get_current_user_id)):
     cached = _get_cached(chart_id, lang)
     if not cached:
         raise HTTPException(status_code=404, detail="Reading not generated yet")

@@ -49,6 +49,28 @@ const SECTION_META: Record<string, { title: string; icon: any }> = {
   nakshatra: { title: 'Nakshatra Profile', icon: Star },
 };
 
+const LANGUAGES: Record<string, string> = {
+  en: 'English',
+  ml: 'Malayalam',
+  ta: 'Tamil',
+  hi: 'Hindi',
+  te: 'Telugu',
+  kn: 'Kannada',
+  bn: 'Bengali',
+  mr: 'Marathi',
+  gu: 'Gujarati',
+  pa: 'Punjabi',
+  ur: 'Urdu',
+  ar: 'Arabic',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  pt: 'Portuguese',
+  ja: 'Japanese',
+  ko: 'Korean',
+  zh: 'Chinese',
+};
+
 export default function ReadingPage() {
   const router = useRouter();
   const params = useParams();
@@ -59,11 +81,17 @@ export default function ReadingPage() {
   const [reading, setReading] = useState<ReadingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [language, setLanguage] = useState<'ml' | 'en'>('ml');
+  const [language, setLanguage] = useState('en');
+  const [translatedSections, setTranslatedSections] = useState<Record<string, string> | null>(null);
+  const [translating, setTranslating] = useState(false);
   const [activeTab, setActiveTab] = useState('full');
   const [expandedDasha, setExpandedDasha] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLangMenu, setShowLangMenu] = useState(false);
+
+  // Cache translations in localStorage
+  const translationCache = useRef<Record<string, Record<string, string>>>({});
 
   const token = session?.access_token;
   const authHeaders = useCallback(() => ({
@@ -71,36 +99,32 @@ export default function ReadingPage() {
     Authorization: `Bearer ${token}`,
   }), [token]);
 
-  const fetchReading = useCallback(async (lang: 'ml' | 'en') => {
-    const res = await fetch(`/api/reading-v2/${chartId}?lang=${lang}`, { headers: authHeaders() });
+  const fetchReading = useCallback(async () => {
+    const res = await fetch(`/api/reading-v2/${chartId}`, { headers: authHeaders() });
     if (!res.ok) return null;
     const data = await res.json();
     if (data.status === 'cached' && data.reading) {
-      // Check if cached reading has the correct format (multiple sections with clean text)
       const sections = data.reading?.sections;
       if (sections && typeof sections === 'object' && Object.keys(sections).length > 2) {
-        // Also check that values are clean text, not raw JSON/markdown
         const firstVal = Object.values(sections)[0];
         if (typeof firstVal === 'string' && !firstVal.includes('```json') && !firstVal.includes('\\n') && !firstVal.startsWith('{')) {
           return data.reading as ReadingData;
         }
       }
-      // Bad format (double-encoded, markdown fences, etc) — return null to trigger regeneration
       return null;
     }
     return null;
   }, [chartId, authHeaders]);
 
-  const generateReading = useCallback(async (lang: 'ml' | 'en') => {
+  const generateReading = useCallback(async () => {
     setGenerating(true);
+    setError(null);
     try {
-      // Call Railway backend directly — Vercel Hobby has 10s serverless timeout,
-      // but AI generation takes 20-30s. Direct call bypasses that limit.
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-813b.up.railway.app';
       const res = await fetch(`${backendUrl}/api/v1/reading/${chartId}/generate`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang, force: true }),
+        body: JSON.stringify({ force: true }),
       });
       if (!res.ok) throw new Error('Generation failed');
       const data = await res.json();
@@ -113,6 +137,61 @@ export default function ReadingPage() {
     }
   }, [chartId, session?.access_token]);
 
+  // Translate reading to target language
+  const translateReading = useCallback(async (targetLang: string) => {
+    if (targetLang === 'en' || !reading?.sections) {
+      setTranslatedSections(null);
+      setLanguage('en');
+      return;
+    }
+
+    // Check cache first
+    const cacheKey = `${chartId}_${targetLang}`;
+    if (translationCache.current[cacheKey]) {
+      setTranslatedSections(translationCache.current[cacheKey]);
+      setLanguage(targetLang);
+      return;
+    }
+
+    // Check localStorage cache
+    try {
+      const stored = localStorage.getItem(`translation_${cacheKey}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        translationCache.current[cacheKey] = parsed;
+        setTranslatedSections(parsed);
+        setLanguage(targetLang);
+        return;
+      }
+    } catch {}
+
+    // Call translate endpoint
+    setTranslating(true);
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://astrology-api-production-813b.up.railway.app';
+      const res = await fetch(`${backendUrl}/api/v1/reading/translate`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sections: reading.sections, target_language: targetLang }),
+      });
+      if (!res.ok) throw new Error('Translation failed');
+      const data = await res.json();
+      if (data.sections) {
+        translationCache.current[cacheKey] = data.sections;
+        try { localStorage.setItem(`translation_${cacheKey}`, JSON.stringify(data.sections)); } catch {}
+        setTranslatedSections(data.sections);
+        setLanguage(targetLang);
+      }
+    } catch (e) {
+      console.error('Translation error:', e);
+      // Fall back to English on error
+      setLanguage('en');
+      setTranslatedSections(null);
+    } finally {
+      setTranslating(false);
+    }
+  }, [chartId, reading?.sections, authHeaders]);
+
   // Use a ref to prevent re-running the initial load on every session refresh
   const hasLoaded = useRef(false);
 
@@ -124,7 +203,6 @@ export default function ReadingPage() {
 
     (async () => {
       setLoading(true);
-      // Fetch chart data
       try {
         const chartRes = await fetch(`/api/charts/${chartId}`, { headers: authHeaders() });
         if (!chartRes.ok) { router.push('/chart/new'); return; }
@@ -134,10 +212,9 @@ export default function ReadingPage() {
         return;
       }
 
-      // Fetch cached reading
-      const cached = await fetchReading(language);
+      const cached = await fetchReading();
       if (!cached) {
-        await generateReading(language);
+        await generateReading();
       } else {
         setReading(cached);
       }
@@ -145,21 +222,10 @@ export default function ReadingPage() {
     })();
   }, [chartId, authLoading, router]);
 
-  const switchLanguage = async (lang: 'ml' | 'en') => {
-    setLanguage(lang);
-    const cached = await fetchReading(lang);
-    if (cached) {
-      setReading(cached);
-    } else {
-      setReading(null);
-      await generateReading(lang);
-    }
-  };
-
   const downloadPdf = async () => {
     setPdfLoading(true);
     try {
-      const res = await fetch(`/api/reading-v2/${chartId}/pdf?lang=${language}`, { headers: authHeaders() });
+      const res = await fetch(`/api/reading-v2/${chartId}/pdf?lang=en`, { headers: authHeaders() });
       if (res.ok) {
         const contentType = res.headers.get('content-type') || '';
         const blob = await res.blob();
@@ -189,15 +255,16 @@ export default function ReadingPage() {
     );
   }
 
-  const sections = reading?.sections || {};
+  // Use translated sections if available, otherwise English
+  const sections = translatedSections || reading?.sections || {};
   const dasha = reading?.dasha;
   const currentPeriod = dasha?.current_period;
   const planets = chart?.planets || [];
 
   const tabs = [
-    { id: 'full', label: language === 'ml' ? 'പൂർണ്ണ വായന' : 'Full Reading', icon: Sparkles },
-    { id: 'dasha', label: language === 'ml' ? 'ദശാ കാലം' : 'Dasha Timeline', icon: Clock },
-    { id: 'planets', label: language === 'ml' ? 'ഗ്രഹങ്ങൾ' : 'Planets', icon: Star },
+    { id: 'full', label: 'Full Reading', icon: Sparkles },
+    { id: 'dasha', label: 'Dasha Timeline', icon: Clock },
+    { id: 'planets', label: 'Planets', icon: Star },
   ];
 
   return (
@@ -209,34 +276,46 @@ export default function ReadingPage() {
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
             <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-2">
-              <ArrowLeft className="h-4 w-4" /> {language === 'ml' ? 'തിരികെ' : 'Back'}
+              <ArrowLeft className="h-4 w-4" /> Back
             </Link>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {chart?.subject?.name || (language === 'ml' ? 'നിങ്ങളുടെ വായന' : 'Your Reading')}
+              {chart?.subject?.name || 'Your Reading'}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              {chart?.subject?.date} {chart?.subject?.time && chart?.subject.time !== '12:00' ? `at ${chart.subject.time.slice(0, 5)}` : ''}
+              {chart?.subject?.date} {chart?.subject?.time && chart.subject.time !== '12:00' ? `at ${chart.subject.time.slice(0, 5)}` : ''}
             </p>
           </div>
 
           {/* Controls */}
           <div className="flex items-center gap-3">
-            {/* Language toggle */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            {/* Language selector */}
+            <div className="relative">
               <button
-                onClick={() => switchLanguage('ml')}
-                className={cn('px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-                  language === 'ml' ? 'bg-white dark:bg-gray-700 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-gray-500')}
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
-                <Globe className="h-3.5 w-3.5" /> മലയാളം
+                <Globe className="h-4 w-4" />
+                {LANGUAGES[language] || language}
+                <ChevronDown className="h-3.5 w-3.5" />
               </button>
-              <button
-                onClick={() => switchLanguage('en')}
-                className={cn('px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                  language === 'en' ? 'bg-white dark:bg-gray-700 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-gray-500')}
-              >
-                English
-              </button>
+              {showLangMenu && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-1 max-h-64 overflow-y-auto">
+                  {Object.entries(LANGUAGES).map(([code, name]) => (
+                    <button
+                      key={code}
+                      onClick={() => { setShowLangMenu(false); translateReading(code); }}
+                      className={cn(
+                        'w-full text-left px-4 py-2 text-sm transition-colors',
+                        language === code
+                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      )}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* PDF download */}
@@ -246,20 +325,28 @@ export default function ReadingPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-              {language === 'ml' ? 'PDF ഡൗൺലോഡ്' : 'Download PDF'}
+              Download PDF
             </button>
           </div>
         </div>
+
+        {/* Translating indicator */}
+        {translating && (
+          <div className="flex items-center gap-2 mb-4 px-4 py-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+            <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
+            <span className="text-sm text-primary-700 dark:text-primary-300">Translating to {LANGUAGES[language]}...</span>
+          </div>
+        )}
 
         {/* Generating state */}
         {generating && (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-10 w-10 animate-spin text-primary-600 mb-4" />
             <p className="text-gray-600 dark:text-gray-400 text-lg">
-              {language === 'ml' ? 'നിങ്ങളുടെ വായന തയ്യാറാക്കുന്നു...' : 'Generating your personalized reading...'}
+              Generating your personalized reading...
             </p>
             <p className="text-gray-400 text-sm mt-1">
-              {language === 'ml' ? '~20 സെക്കൻഡ് എടുക്കും' : 'This takes ~20 seconds'}
+              This takes ~20 seconds
             </p>
           </div>
         )}
@@ -270,16 +357,16 @@ export default function ReadingPage() {
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 max-w-md text-center">
               <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-                {language === 'ml' ? 'വായന തയ്യാറാക്കാൻ കഴിഞ്ഞില്ല' : 'Could not generate reading'}
+                Could not generate reading
               </h3>
               <p className="text-sm text-red-600 dark:text-red-300 mb-6">
                 {error}
               </p>
               <button
-                onClick={() => { setError(null); generateReading(language); }}
+                onClick={() => { setError(null); generateReading(); }}
                 className="px-6 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
               >
-                {language === 'ml' ? 'വീണ്ടും ശ്രമിക്കുക' : 'Try Again'}
+                Try Again
               </button>
             </div>
           </div>
@@ -326,33 +413,29 @@ export default function ReadingPage() {
             {/* Dasha Timeline Tab */}
             {activeTab === 'dasha' && dasha && (
               <div className="space-y-4">
-                {/* Current Period Card */}
                 {currentPeriod && (
                   <div className="bg-gradient-to-br from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 rounded-2xl border-2 border-primary-200 dark:border-primary-800 p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                        {language === 'ml' ? 'നിലവിൽ സജീവം' : 'ACTIVE NOW'}
-                      </span>
+                      <span className="text-sm font-medium text-primary-700 dark:text-primary-300">ACTIVE NOW</span>
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
                       {currentPeriod.mahadasha} Mahadasha
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      {currentPeriod.mahadasha_end} വരെ • {currentPeriod.mahadasha_remaining} ശേഷിക്കുന്നു
+                      until {currentPeriod.mahadasha_end} &bull; {currentPeriod.mahadasha_remaining} remaining
                     </p>
                     <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {currentPeriod.antardasha} Antardasha
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {currentPeriod.antardasha_end} വരെ • {currentPeriod.antardasha_remaining} ശേഷിക്കുന്നു
+                        until {currentPeriod.antardasha_end} &bull; {currentPeriod.antardasha_remaining} remaining
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* All Mahadashas */}
                 {dasha.mahadashas?.map((md) => {
                   const isExpanded = expandedDasha === md.planet;
                   const isCurrent = md.planet === dasha.current_mahadasha;
