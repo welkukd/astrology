@@ -6,6 +6,7 @@ import { useAuth } from '@/app/providers';
 import { Moon, Plus, Loader2, Calendar, Trash2, BookOpen, Star, CreditCard, Zap, Crown, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { getRandomHook } from '@/lib/hooks';
 
 type BillingStatus = {
   plan: string;
@@ -164,6 +165,18 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        <section className="mb-6">
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:bg-gradient-to-r from-amber-900/30 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <Star className="h-5 w-5" />
+              Daily Cosmic Hook
+            </h2>
+            <p className="text-gray-700 dark:text-gray-300 text-center italic">
+              {getRandomHook()}
+            </p>
+          </div>
+        </section>
 
         <div className="mb-8 flex items-center justify-between">
           <div>

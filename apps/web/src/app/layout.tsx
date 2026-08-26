@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/layout/Navbar';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Astrology Assistant - Your Birth Chart, Explained',
-  description: 'Astronomically calculated birth charts with AI interpretations. For entertainment and reflection only.',
-  keywords: ['astrology', 'birth chart', 'natal chart', 'horoscope', 'zodiac'],
+  title: 'Gaia — Private Spiritual Toolkit',
+  description: 'Birth charts, tarot, AI guidance, and Human Design. No tracking, no noise.',
+  keywords: ['astrology', 'birth chart', 'natal chart', 'tarot', 'human design', 'spirituality'],
 };
 
 export default function RootLayout({
@@ -18,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning className="dark">
+      <body className={`${inter.variable} font-sans antialiased bg-bg-primary text-text-primary`}>
         <Providers>
           <Navbar />
           {children}

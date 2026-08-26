@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Moon, Star, LayoutDashboard, LogOut, Menu, X, BookOpen } from 'lucide-react';
+import { Moon, Star, LayoutDashboard, LogOut, Menu, X, BookOpen, Zap, Heart, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/app/providers';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,10 @@ export function Navbar() {
               <>
                 {navLink('/dashboard', 'Dashboard', <LayoutDashboard className="h-4 w-4" />)}
                 {navLink('/chart/new', 'New Chart', <Moon className="h-4 w-4" />)}
+                {navLink('/tarot', 'Tarot', <Moon className="h-4 w-4" />)}
+                {navLink('/transit', 'Transit', <Zap className="h-4 w-4" />)}
+                {navLink('/numerology', 'Numerology', <Heart className="h-4 w-4" />)}
+                {navLink('/compatibility', 'Compatibility', <UserPlus className="h-4 w-4" />)}
               </>
             )}
             {!session && (
@@ -104,6 +108,9 @@ export function Navbar() {
             <>
               {navLink('/dashboard', 'Dashboard', <LayoutDashboard className="h-4 w-4" />)}
               {navLink('/chart/new', 'New Chart', <Moon className="h-4 w-4" />)}
+              {navLink('/tarot', 'Tarot', <Moon className="h-4 w-4" />)}
+              {navLink('/transit', 'Transit', <Zap className="h-4 w-4" />)}
+              {navLink('/numerology', 'Numerology', <Heart className="h-4 w-4" />)}
             </>
           )}
           {!session && (

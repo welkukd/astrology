@@ -3,8 +3,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Moon, Loader2, MapPin, Clock, Calendar, AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
+import { Moon, Loader2, MapPin, Clock, Calendar, AlertCircle, CheckCircle2, Search, X, Star } from 'lucide-react';
 import { useAuth } from '@/app/providers';
+import { getRandomHook } from '@/lib/hooks';
 
 const ZODIAC_OPTIONS = [
   { value: 'tropical', label: 'Western (Tropical)', description: 'Sun-based, seasonal' },
@@ -218,33 +219,45 @@ export default function NewChartPage() {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
           {error && error.startsWith('FREE_LIMIT|') ? (
-            <div className="mb-6 p-5 bg-gradient-to-r from-primary-50 to-yellow-50 dark:from-primary-900/20 dark:to-yellow-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-primary-100 dark:bg-primary-900/40 rounded-lg">
-                  <AlertCircle className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                </div>
-                <p className="font-semibold text-gray-900 dark:text-white">{error.split('|')[1]}</p>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Upgrade to Pro for unlimited charts, full AI readings, PDF export, and more.
-              </p>
-              <div className="flex gap-3">
-                <a href="/pricing" className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm">
-                  View Plans
-                </a>
-                <button onClick={() => setError(null)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          ) : error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3 text-red-700 dark:text-red-400">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
+                      <div className="mb-6 p-5 bg-gradient-to-r from-primary-50 to-yellow-50 dark:from-primary-900/20 dark:to-yellow-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2 bg-primary-100 dark:bg-primary-900/40 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                          </div>
+                          <p className="font-semibold text-gray-900 dark:text-white">{error.split('|')[1]}</p>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Upgrade to Pro for unlimited charts, full AI readings, PDF export, and more.
+                        </p>
+                        <div className="flex gap-3">
+                          <a href="/pricing" className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm">
+                            View Plans
+                          </a>
+                          <button onClick={() => setError(null)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    ) : error && (
+                      <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3 text-red-700 dark:text-red-400">
+                        <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                        <p>{error}</p>
+                      </div>
+                    )}
 
-          {renderStep()}
+                  <section className="mb-6">
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:bg-gradient-to-r from-amber-900/30 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <Star className="h-5 w-5" />
+                        Daily Cosmic Hook
+                      </h2>
+                      <p className="text-gray-700 dark:text-gray-300 text-center italic">
+                        {getRandomHook()}
+                      </p>
+                    </div>
+                  </section>
+
+                  {renderStep()}
 
           <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
             <button

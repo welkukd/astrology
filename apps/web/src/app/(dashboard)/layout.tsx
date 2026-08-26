@@ -1,0 +1,14 @@
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { AuthLayout } from '@/components/layout/AuthLayout';
+
+export default function DashboardLayoutWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthLayout>
+      <DashboardLayout>{children}</DashboardLayout>
+    </AuthLayout>
+  );
+}

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/app/providers';
 import { Moon, Star, Sparkles, Download, Share2, Loader2, MessageSquare, BookOpen, LayoutGrid } from 'lucide-react';
 import { cn, formatDate, getSignEmoji, getPlanetEmoji } from '@/lib/utils';
+import { getRandomHook } from '@/lib/hooks';
 import { ChartWheel } from '@/components/chart/ChartWheel';
 import { VedicChart } from '@/components/chart/VedicChart';
 import { DisclaimerBanner } from '@/components/ui/DisclaimerBanner';
@@ -113,8 +114,20 @@ export default function ChartPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <DisclaimerBanner />
+  
+            <section className="mb-6">
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:bg-gradient-to-r from-amber-900/30 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Daily Cosmic Hook
+                </h2>
+                <p className="text-gray-700 dark:text-gray-300 text-center italic">
+                  {getRandomHook()}
+                </p>
+              </div>
+            </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-4 mb-6">
           <Link href={`/chart/${chartId}/read`} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
             <BookOpen className="h-4 w-4" />
@@ -334,32 +347,46 @@ function PlanetsTab({ planets, interpretations, onRequest, interpreting }: any) 
   );
 }
 
-function HousesTab({ houses, planets }: any) {
+function HousesTab({ houses, planets, interpretations, onRequest, interpreting }: any) {
   return (
     <div className="space-y-3">
-      {houses.map((h: any) => (
-        <div key={h.number} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-bold text-gray-900 dark:text-white w-8 text-right">{h.number}</span>
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">House {h.number} • {h.sign}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{h.degree_in_sign.toFixed(1)}°</p>
+      {houses.map((h: any) => {
+        const key = `house-${h.number}`;
+        const interp = interpretations[key];
+        return (
+          <div key={h.number} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-gray-900 dark:text-white w-8 text-right">{h.number}</span>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">House {h.number} • {h.sign}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{h.degree_in_sign.toFixed(1)}°</p>
+                </div>
+              </div>
+              <div className="text-right text-sm text-gray-500 dark:text-gray-400">
+                <p>Cusp: {h.longitude.toFixed(2)}°</p>
               </div>
             </div>
-            <div className="text-right text-sm text-gray-500 dark:text-gray-400">
-              <p>Cusp: {h.longitude.toFixed(2)}°</p>
+            <div className="mt-3 ml-11 flex flex-wrap gap-1">
+              {planets.filter((p: any) => p.house === h.number).map((p: any) => (
+                <span key={p.name} className="px-2 py-1 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded">
+                  {getPlanetEmoji(p.name)} {p.name}
+                </span>
+              ))}
             </div>
+            {interp ? (
+              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                {interp}
+              </div>
+            ) : (
+              <button onClick={() => onRequest({ house: h.number })} disabled={interpreting === key}
+                className="w-full py-2 px-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 rounded hover:bg-primary-100 text-sm font-medium transition-colors disabled:opacity-50">
+                {interpreting === key ? 'Loading...' : 'Get AI Interpretation'}
+              </button>
+            )}
           </div>
-          <div className="mt-3 ml-11 flex flex-wrap gap-1">
-            {planets.filter((p: any) => p.house === h.number).map((p: any) => (
-              <span key={p.name} className="px-2 py-1 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded">
-                {getPlanetEmoji(p.name)} {p.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
