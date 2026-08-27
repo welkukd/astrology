@@ -1,6 +1,17 @@
 {
-  "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "installCommand": "npm install"
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": ".vercel/output" } },
+    { "src": "apps/api/app/main.py", "use": "@vercel/python", "config": { "runtime": "python3.11" } }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/apps/api/app/main.py" },
+    { "src": "/(.*)", "dest": "/apps/web/.vercel/output/static/$1" }
+  ],
+  "env": {
+    "GEMINI_API_KEY": "@gemini-api-key",
+    "SUPABASE_URL": "@supabase-url",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase-service-role-key",
+    "NEXT_PUBLIC_API_URL": "https://${VERCEL_URL}"
+  }
 }
