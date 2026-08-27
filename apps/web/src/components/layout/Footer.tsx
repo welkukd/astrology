@@ -51,10 +51,10 @@ export function Footer({ className, style }: FooterProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 lg:gap-8 mb-8 lg:mb-12">
           {/* Brand Column */}
           <div className="col-span-2 lg:col-span-1 space-y-4">
-            <Link href="/" className="flex items-center gap-2" aria-label="Gaia Home">
+            <Link href="/" className="flex items-center gap-2" aria-label="Astrology Assistant Home">
               <Moon className="h-8 w-8 text-accent-gold" aria-hidden="true" />
               <span className="text-heading-3 font-semibold tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
-                Gaia
+                Astrology Assistant
               </span>
             </Link>
             <p className="text-body-sm text-text-muted leading-relaxed max-w-xs">
@@ -139,7 +139,7 @@ export function Footer({ className, style }: FooterProps) {
         {/* Bottom Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-caption text-text-subtle text-center sm:text-left">
-            © {new Date().getFullYear()} Gaia. Private spiritual toolkit. For entertainment and reflection only.
+            © {new Date().getFullYear()} Astrology Assistant. Private spiritual toolkit. For entertainment and reflection only.
           </p>
 
           <div className="flex items-center gap-4 text-caption text-text-subtle">

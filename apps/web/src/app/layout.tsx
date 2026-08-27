@@ -7,7 +7,7 @@ import { Navbar } from '@/components/layout/Navbar';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Gaia — Private Spiritual Toolkit',
+  title: 'Astrology Assistant',
   description: 'Birth charts, tarot, AI guidance, and Human Design. No tracking, no noise.',
   keywords: ['astrology', 'birth chart', 'natal chart', 'tarot', 'human design', 'spirituality'],
 };

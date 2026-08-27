@@ -101,13 +101,13 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo / Brand */}
           <div className="flex items-center gap-2">
-            <Moon className="h-8 w-8 text-accent-gold flex-shrink-0" aria-hidden="true" />
             <Link
               href="/"
-              className="text-heading-3 font-semibold tracking-tight"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+              className="flex items-center gap-2"
             >
-              Gaia
+              <span className="text-heading-3 font-semibold tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
+                Astrology Assistant
+              </span>
             </Link>
           </div>
 

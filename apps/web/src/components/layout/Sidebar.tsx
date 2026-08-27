@@ -59,11 +59,11 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
       >
         {/* Logo & Collapse Toggle */}
         <div className="flex items-center justify-between h-16 px-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-          <Link href="/dashboard/astrology" className="flex items-center gap-2" aria-label="Gaia Home">
+          <Link href="/dashboard/astrology" className="flex items-center gap-2" aria-label="Astrology Assistant Home">
             <span className="h-8 w-8 text-accent-gold flex-shrink-0" aria-hidden="true">★</span>
             {!collapsed && (
               <span className="text-heading-3 font-semibold tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
-                Gaia
+                Astrology Assistant
               </span>
             )}
           </Link>
