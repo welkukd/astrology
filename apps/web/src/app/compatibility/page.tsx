@@ -9,7 +9,7 @@ import { getRandomHook } from '@/lib/hooks';
 
 export default function CompatibilityPage() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
@@ -94,6 +94,14 @@ export default function CompatibilityPage() {
     setSelectedChartA(selectedChartB);
     setSelectedChartB(selectedChartA);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   if (!session?.access_token) {
     router.push('/auth/login');

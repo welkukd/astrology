@@ -8,9 +8,10 @@ type AuthContextType = {
   session: Session | null;
   supabase: SupabaseClient | null;
   loading: boolean;
+  authLoading: boolean;
 };
 
-const AuthContext = createContext<AuthContextType>({ session: null, supabase: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ session: null, supabase: null, loading: true, authLoading: true });
 
 // Module-level singleton to prevent multiple GoTrueClient instances
 let sharedSupabase: SupabaseClient | null = null;
@@ -30,15 +31,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => getSupabase());
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase) { setLoading(false); return; }
+    if (!supabase) { setLoading(false); setAuthLoading(false); return; }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      setAuthLoading(false);
     }).catch(() => {
       setLoading(false);
+      setAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -49,7 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   return (
-    <AuthContext.Provider value={{ session, supabase, loading }}>
+    <AuthContext.Provider value={{ session, supabase, loading, authLoading }}>
       {children}
     </AuthContext.Provider>
   );

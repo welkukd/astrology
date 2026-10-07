@@ -29,7 +29,7 @@ const STEPS = [
 
 export default function NewChartPage() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, authLoading } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +186,14 @@ export default function NewChartPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -217,84 +225,92 @@ export default function NewChartPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
-          {error && error.startsWith('FREE_LIMIT|') ? (
-                      <div className="mb-6 p-5 bg-gradient-to-r from-primary-50 to-yellow-50 dark:from-primary-900/20 dark:to-yellow-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-primary-100 dark:bg-primary-900/40 rounded-lg">
-                            <AlertCircle className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                          </div>
-                          <p className="font-semibold text-gray-900 dark:text-white">{error.split('|')[1]}</p>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                          Upgrade to Pro for unlimited charts, full AI readings, PDF export, and more.
-                        </p>
-                        <div className="flex gap-3">
-                          <a href="/pricing" className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm">
-                            View Plans
-                          </a>
-                          <button onClick={() => setError(null)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">
-                            Dismiss
-                          </button>
-                        </div>
-                      </div>
-                    ) : error && (
-                      <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3 text-red-700 dark:text-red-400">
-                        <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                        <p>{error}</p>
-                      </div>
+        {!session?.access_token ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Please log in to create a birth chart.</p>
+            <Link href="/auth/login" className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+              Log In
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
+            {error && error.startsWith('FREE_LIMIT|') ? (
+              <div className="mb-6 p-5 bg-gradient-to-r from-primary-50 to-yellow-50 dark:from-primary-900/20 dark:to-yellow-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-primary-100 dark:bg-primary-900/40 rounded-lg">
+                    <AlertCircle className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                  </div>
+                  <p className="font-semibold text-gray-900 dark:text-white">{error.split('|')[1]}</p>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Upgrade to Pro for unlimited charts, full AI readings, PDF export, and more.
+                </p>
+                <div className="flex gap-3">
+                  <a href="/pricing" className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm">
+                    View Plans
+                  </a>
+                  <button onClick={() => setError(null)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ) : error && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3 text-red-700 dark:text-red-400">
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <section className="mb-6">
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:bg-gradient-to-r from-amber-900/30 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Daily Cosmic Hook
+                </h2>
+                <p className="text-gray-700 dark:text-gray-300 text-center italic">
+                  {getRandomHook()}
+                </p>
+              </div>
+            </section>
+
+            {renderStep()}
+
+            <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={handleBack}
+                disabled={step === 0}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium disabled:opacity-50 transition-colors"
+              >
+                Back
+              </button>
+              <div className="flex gap-3">
+                {step < STEPS.length - 1 ? (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                  >
+                    Continue
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creating Chart...
+                      </>
+                    ) : (
+                      'Generate Chart'
                     )}
-
-                  <section className="mb-6">
-                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:bg-gradient-to-r from-amber-900/30 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        <Star className="h-5 w-5" />
-                        Daily Cosmic Hook
-                      </h2>
-                      <p className="text-gray-700 dark:text-gray-300 text-center italic">
-                        {getRandomHook()}
-                      </p>
-                    </div>
-                  </section>
-
-                  {renderStep()}
-
-          <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={handleBack}
-              disabled={step === 0}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium disabled:opacity-50 transition-colors"
-            >
-              Back
-            </button>
-            
-            <div className="flex gap-3">
-              {step < STEPS.length - 1 ? (
-                <button
-                  onClick={handleNext}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-                >
-                  Continue
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating Chart...
-                    </>
-                  ) : (
-                    'Generate Chart'
-                  )}
-                </button>
-              )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
           <strong>Important:</strong> This service provides astrological interpretations for entertainment and self-reflection only.
@@ -392,7 +408,6 @@ function BirthDetailsStep({ formData, onChange, searchQuery, onSearchChange, sug
               </button>
             )}
           </div>
-          
           {showSuggestions && suggestions.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-auto">
               {suggestions.map((loc: any) => (
@@ -409,7 +424,6 @@ function BirthDetailsStep({ formData, onChange, searchQuery, onSearchChange, sug
             </div>
           )}
         </div>
-        
         {formData.latitude && formData.longitude && (
           <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm">
             <p className="text-gray-700 dark:text-gray-300">
@@ -499,28 +513,25 @@ function OptionsStep({ formData, onChange }: any) {
 }
 
 function ReviewStep({ formData }: any) {
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
+  const zodiacLabel = ZODIAC_OPTIONS.find(o => o.value === formData.zodiac)?.label || formData.zodiac;
   return (
     <div className="space-y-6">
-      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 dark:text-white mb-3">Birth Details</h3>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div><dt className="text-gray-500 dark:text-gray-400">Name</dt><dd className="font-medium">{formData.name || '—'}</dd></div>
-          <div><dt className="text-gray-500 dark:text-gray-400">Date</dt><dd className="font-medium">{formatDate(formData.date)}</dd></div>
-          <div><dt className="text-gray-500 dark:text-gray-400">Time</dt><dd className="font-medium">{formData.timeUnknown ? 'Unknown' : formData.time}</dd></div>
-          <div><dt className="text-gray-500 dark:text-gray-400">Location</dt><dd className="font-medium">{formData.locationName || `${formData.latitude.toFixed(4)}, ${formData.longitude.toFixed(4)}`}</dd></div>
-          <div><dt className="text-gray-500 dark:text-gray-400">Timezone</dt><dd className="font-medium">{formData.timezone}</dd></div>
-          <div><dt className="text-gray-500 dark:text-gray-400">System</dt><dd className="font-medium capitalize">{formData.zodiac}</dd></div>
-          <div><dt className="text-gray-500 dark:text-gray-400">Houses</dt><dd className="font-medium">{formData.houseSystem}</dd></div>
-          {formData.zodiac === 'sidereal' && (
-            <div><dt className="text-gray-500 dark:text-gray-400">Ayanamsa</dt><dd className="font-medium">{formData.ayanamsa}</dd></div>
-          )}
-        </dl>
+      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Review Your Details</h3>
+        <div className="space-y-3 text-sm">
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">Name:</span> {formData.name || '(not provided)'}</p>
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">Date:</span> {formData.date}</p>
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">Time:</span> {formData.timeUnknown ? 'Unknown' : formData.time}</p>
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">Location:</span> {formData.locationName || `${formData.latitude.toFixed(4)}, ${formData.longitude.toFixed(4)}`}</p>
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">Timezone:</span> {formData.timezone}</p>
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">System:</span> {zodiacLabel}</p>
+          <p><span className="font-medium text-gray-700 dark:text-gray-300">House System:</span> {formData.houseSystem}</p>
+          {formData.zodiac === 'sidereal' && <p><span className="font-medium text-gray-700 dark:text-gray-300">Ayanamsa:</span> {formData.ayanamsa}</p>}
+        </div>
       </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+        Click "Generate Chart" to create your birth chart. This may take a few seconds.
+      </p>
     </div>
   );
 }

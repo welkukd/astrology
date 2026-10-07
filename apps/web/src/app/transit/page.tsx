@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function TransitPage() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transits, setTransits] = useState<any>(null);
@@ -83,6 +83,14 @@ export default function TransitPage() {
     const applyingText = applying ? 'applying' : 'separating';
     return `${transit_planet} ${aspectType} ${natal_point} (orb ${orb}°, ${applyingText})`;
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   if (!session?.access_token) {
     router.push('/auth/login');

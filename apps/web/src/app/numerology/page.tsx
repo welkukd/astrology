@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function NumerologyPage() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null);
@@ -88,6 +88,14 @@ export default function NumerologyPage() {
     };
     return meaningMap[number] || '';
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   if (!session?.access_token) {
     router.push('/auth/login');
