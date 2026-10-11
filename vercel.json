@@ -11,8 +11,8 @@
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://astrology-seven-teal.vercel.app/api/$1"
+      "source": "/api/v1/:path*",
+      "destination": "https://astrology-api.up.railway.app/api/v1/:path*"
     }
   ]
 }
