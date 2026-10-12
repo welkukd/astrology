@@ -12,7 +12,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://astrology-api.up.railway.app/api/v1/:path*"
+      "destination": "https://astrology-api.railway.app/api/v1/:path*"
     }
   ]
 }
