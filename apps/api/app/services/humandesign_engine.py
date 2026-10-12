@@ -23,15 +23,13 @@ from app.schemas.humandesign import (
     HDAuthority,
     HDCenter,
     HDChannel,
-    HDDefinitionType,
+    DefinitionType as HDDefinitionType,
     HDGate,
-    HDGateDetail,
     HDIncarnationCross,
     HDProfile,
     HDProfileLine,
     HDType,
     HDVariable,
-    HDVariableDetail,
 )
 
 # ============================================
