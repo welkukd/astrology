@@ -128,7 +128,7 @@ def _save_reading(chart_id: str, reading_type: str, content: str, context: dict 
         pass
 
 
-def _get_cached_reading(chart_id: str, reading_type: str, context: dict = None) -> str | None:
+def _get_cached_reading(chart_id: str, reading_type: str, context: dict = None) -> Optional[str]:
     try:
         supabase = get_supabase_client()
         result = supabase.table("interpretations").select("content") \

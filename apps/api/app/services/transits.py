@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 import swisseph as swe
 
@@ -65,7 +65,7 @@ def _angle_diff(a: float, b: float) -> float:
     return d if d <= 180 else 360 - d
 
 
-def _calc_planet(planet_id: int, jd: float) -> dict | None:
+def _calc_planet(planet_id: int, jd: float) -> Optional[dict]:
     """Calculate a planet's position for a Julian day. Returns None on failure."""
     try:
         data, _ = swe.calc_ut(jd, planet_id, swe.FLG_SWIEPH | swe.FLG_SPEED)
@@ -90,7 +90,7 @@ def _jd_now() -> float:
     return swe.julday(now.year, now.month, now.day, now.hour + now.minute / 60.0)
 
 
-def _check_aspect(natal_lon: float, transit_lon: float, aspect_name: str) -> dict | None:
+def _check_aspect(natal_lon: float, transit_lon: float, aspect_name: str) -> Optional[dict]:
     """Check if a transit-natal pair forms a specific aspect within orb."""
     angle, default_orb = ASPECTS[aspect_name]
     diff = _angle_diff(transit_lon, natal_lon)

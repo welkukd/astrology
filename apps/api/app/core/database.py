@@ -1,7 +1,8 @@
 import os
 from supabase import create_client, Client
+from typing import Optional
 
-_supabase_client: Client | None = None
+_supabase_client: Optional[Client] = None
 
 
 def get_supabase_client() -> Client:

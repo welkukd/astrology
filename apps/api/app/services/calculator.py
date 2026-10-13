@@ -8,6 +8,7 @@ import os
 import swisseph
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from typing import Optional
 
 SIGN_NAMES = [const.ARIES, const.TAURUS, const.GEMINI, const.CANCER,
               const.LEO, const.VIRGO, const.LIBRA, const.SCORPIO,
@@ -177,14 +178,14 @@ _patch_swe_object()
 
 def calculate_chart(
     date_str: str,
-    time_str: str | None,
+    time_str: Optional[str],
     time_unknown: bool,
     latitude: float,
     longitude: float,
     timezone_str: str,
     zodiac: str = "tropical",
     house_system: str = "Placidus",
-    ayanamsa: str | None = None,
+    ayanamsa: Optional[str] = None,
 ) -> dict:
     year, month, day = map(int, date_str.split("-"))
     utc_offset = _get_utc_offset(timezone_str)

@@ -55,7 +55,7 @@ def _fetch_chart(chart_id: str, user_id: str) -> dict:
     return result.data["chart_data"]
 
 
-def _get_cached(chart_id: str, language: str = "en") -> dict | None:
+def _get_cached(chart_id: str, language: str = "en") -> Optional[dict]:
     supabase = get_supabase_client()
     result = supabase.table("interpretations").select("reading_data") \
         .eq("chart_id", chart_id).eq("type", "full_v2") \
