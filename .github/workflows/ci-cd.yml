@@ -105,7 +105,7 @@ jobs:
         run: railway link ${{ secrets.RAILWAY_PROJECT_ID }}
       - name: Deploy to Railway
         run: |
-          railway up --detach
+          cd apps/api && railway up --detach
       - name: Verify deployment
         run: |
           sleep 30
