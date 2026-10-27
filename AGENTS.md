@@ -1,3 +1,13 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
 # Astrology App - AGENTS.md
 
 ## Project
@@ -81,16 +91,16 @@ aspect = aspects.getAspect(obj1, obj2, const.ALL_ASPECTS)
 curl -s https://astrology-awbato3ho-zone-1433.vercel.app/api/health
 
 # Backend health (Railway direct)
-curl -s https://astrology-api.railway.app/health
+curl -s https://astrology-api.up.railway.app/health
 
 # Backend API routes (should return 401 auth, not 404)
-curl -s https://astrology-api.railway.app/api/v1/natal -X POST -H "Content-Type: application/json" -d '{"date":"1990-01-01","time":"12:00","time_unknown":false,"latitude":28.6139,"longitude":77.2090,"timezone":"Asia/Kolkata","name":"Test","zodiac":"tropical","house_system":"placidus"}'
+curl -s https://astrology-api.up.railway.app/api/v1/natal -X POST -H "Content-Type: application/json" -d '{"date":"1990-01-01","time":"12:00","time_unknown":false,"latitude":28.6139,"longitude":77.2090,"timezone":"Asia/Kolkata","name":"Test","zodiac":"tropical","house_system":"placidus"}'
 ```
 
-# UPDATED - 2026-10-27 08:55:00 EDT — Autonomous orchestrator scan
+# UPDATED - 2026-10-27 21:15:00 EDT — Autonomous orchestrator scan
 # Frontend DEPLOYED & WORKING at https://astrology-awbato3ho-zone-1433.vercel.app
 # Backend PARTIAL: /health works, /api/v1/* routes return 404 on Railway
-# Local TestClient confirms routes work (401 auth required)
+# Local TestClient confirms routes work, return 401 auth required (correct behavior)
 # GitHub push completed (origin/main up to date)
 # Railway config: root railway.json + nixpacks.toml, workingDirectory: apps/api
 # DIAGNOSIS: Railway deployment not linked to GitHub or using stale build. Need user to:
@@ -99,8 +109,10 @@ curl -s https://astrology-api.railway.app/api/v1/natal -X POST -H "Content-Type:
 #   3. Add env vars: GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 #   4. Trigger fresh deploy
 # 
-# VERIFIED 2026-10-27:
+# VERIFIED 2026-10-27 21:15:00 EDT:
 # - Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK
+# - Frontend /api/charts: returns 401 Unauthorized (correct — auth required)
+# - Frontend /api/interpret: returns "Interpretation failed" (backend 404)
 # - Backend /health: https://astrology-api.up.railway.app/health returns OK
 # - Backend /api/v1/*: All routes return 404 (Railway deployment not linked to GitHub / stale build)
 # - Vercel rewrites updated to astrology-api.up.railway.app (pushed b2f2b7c)
