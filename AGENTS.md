@@ -101,7 +101,8 @@ curl -s https://astrology-api.railway.app/api/v1/natal -X POST -H "Content-Type:
 # 
 # VERIFIED 2026-10-27:
 # - Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK
-# - Backend /health: https://astrology-api.railway.app/health returns OK
-# - Backend /api/v1/*: All routes return 404 (deployment not linked to GitHub)
+# - Backend /health: https://astrology-api.up.railway.app/health returns OK
+# - Backend /api/v1/*: All routes return 404 (Railway deployment not linked to GitHub / stale build)
+# - Vercel rewrites updated to astrology-api.up.railway.app (pushed b2f2b7c)
 # - Railway CLI: Not authenticated — requires user to login and link project
 # - Local TestClient: All routes work, return 401 auth required (correct behavior)
