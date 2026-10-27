@@ -42,7 +42,7 @@ aspect = aspects.getAspect(obj1, obj2, const.ALL_ASPECTS)
 ```
 
 ## Deployment
-- Backend: `railway.json` + `Procfile` in `apps/api/`
+- Backend: `railway.json` + `nixpacks.toml` at root (workingDirectory: apps/api)
 - Frontend: `vercel.json` in `apps/web/` (auto-detected by Vercel)
 - Env vars needed:
   - Backend: `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -62,9 +62,46 @@ aspect = aspects.getAspect(obj1, obj2, const.ALL_ASPECTS)
 - ✅ Calculation engine (flatlib) — WORKS (12 planets, 12 houses, 44 aspects)
 - ✅ AI interpretation (Gemini Flash) — WORKS (prompts for overview/planet/aspect/transit/synastry/question)
 - ✅ Frontend build (Next.js) — PASSES (0 compile errors)
-- ✅ Backend startup — PASSES (uvicorn, all imports)
-- ✅ Deployment configs — READY (Procfile, railway.json, vercel.json)
+- ✅ Backend startup (local) — PASSES (uvicorn, all imports, TestClient verified)
+- ✅ Frontend deployed — LIVE at https://astrology-awbato3ho-zone-1433.vercel.app
+- ⚠️ Backend deployed — Railway returns 200 for /health but 404 for /api/v1/* routes
 - ⏳ Supabase setup — needs user to create project + run schema.sql
-- ⏳ Deployment — needs user to push to GitHub, connect Railway/Vercel, set env vars
+- ⏳ Railway deployment — needs user to connect GitHub repo to Railway, configure env vars, trigger deploy
 
-# DONE - 2026-09-19 18:39:45
+## External Blockers
+| Blocker | Required For | Evidence Needed |
+|---------|--------------|-----------------|
+| Railway project connected to GitHub | Backend auto-deploy | Railway dashboard shows project linked to welkukd/astrology |
+| Railway env vars set | Backend runtime | `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` in Railway |
+| Supabase project created | DB + Auth | Supabase dashboard shows project with schema.sql applied |
+
+## Verification Commands
+```bash
+# Frontend health
+curl -s https://astrology-awbato3ho-zone-1433.vercel.app/api/health
+
+# Backend health (Railway direct)
+curl -s https://astrology-api.railway.app/health
+
+# Backend API routes (should return 401 auth, not 404)
+curl -s https://astrology-api.railway.app/api/v1/natal -X POST -H "Content-Type: application/json" -d '{"date":"1990-01-01","time":"12:00","time_unknown":false,"latitude":28.6139,"longitude":77.2090,"timezone":"Asia/Kolkata","name":"Test","zodiac":"tropical","house_system":"placidus"}'
+```
+
+# UPDATED - 2026-10-27 08:55:00 EDT — Autonomous orchestrator scan
+# Frontend DEPLOYED & WORKING at https://astrology-awbato3ho-zone-1433.vercel.app
+# Backend PARTIAL: /health works, /api/v1/* routes return 404 on Railway
+# Local TestClient confirms routes work (401 auth required)
+# GitHub push completed (origin/main up to date)
+# Railway config: root railway.json + nixpacks.toml, workingDirectory: apps/api
+# DIAGNOSIS: Railway deployment not linked to GitHub or using stale build. Need user to:
+#   1. Link Railway project to GitHub repo welkukd/astrology
+#   2. Set workingDirectory to apps/api in Railway dashboard
+#   3. Add env vars: GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+#   4. Trigger fresh deploy
+# 
+# VERIFIED 2026-10-27:
+# - Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK
+# - Backend /health: https://astrology-api.railway.app/health returns OK
+# - Backend /api/v1/*: All routes return 404 (deployment not linked to GitHub)
+# - Railway CLI: Not authenticated — requires user to login and link project
+# - Local TestClient: All routes work, return 401 auth required (correct behavior)
