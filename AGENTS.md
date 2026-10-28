@@ -97,24 +97,28 @@ curl -s https://astrology-api.up.railway.app/health
 curl -s https://astrology-api.up.railway.app/api/v1/natal -X POST -H "Content-Type: application/json" -d '{"date":"1990-01-01","time":"12:00","time_unknown":false,"latitude":28.6139,"longitude":77.2090,"timezone":"Asia/Kolkata","name":"Test","zodiac":"tropical","house_system":"placidus"}'
 ```
 
-# UPDATED - 2026-10-27 21:15:00 EDT — Autonomous orchestrator scan
+# VERIFIED 2026-10-28 01:50:00 EDT — Autonomous orchestrator scan (RUN 3)
 # Frontend DEPLOYED & WORKING at https://astrology-awbato3ho-zone-1433.vercel.app
-# Backend PARTIAL: /health works, /api/v1/* routes return 404 on Railway
-# Local TestClient confirms routes work, return 401 auth required (correct behavior)
-# GitHub push completed (origin/main up to date)
-# Railway config: root railway.json + nixpacks.toml, workingDirectory: apps/api
-# DIAGNOSIS: Railway deployment not linked to GitHub or using stale build. Need user to:
-#   1. Link Railway project to GitHub repo welkukd/astrology
+# Backend CRITICAL ISSUE: Railway deployment serves DIFFERENT CODEBASE than GitHub repo
+#   - Railway openapi.json shows: /api/auth/*, /api/nguoi/* (Vietnamese endpoints)
+#   - Local main.py expects: /api/v1/* (charts, ai, readings, etc.)
+#   - Frontend vercel.json rewrites /api/v1/* → Railway /api/v1/* (404 on Railway)
+# Local TestClient confirms local routes work, return 401 auth required (correct behavior)
+# GitHub push completed (origin/main up to date at 22bebb0)
+# Railway config: root railway.json + nixpacks.toml, workingDirectory: apps/api (correct)
+# DIAGNOSIS: Railway project linked to WRONG REPO or stale commit. Need user to:
+#   1. In Railway dashboard: Link project to GitHub repo welkukd/astrology
 #   2. Set workingDirectory to apps/api in Railway dashboard
 #   3. Add env vars: GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 #   4. Trigger fresh deploy
 # 
-# VERIFIED 2026-10-27 21:15:00 EDT:
+# VERIFIED 2026-10-28 01:50:00 EDT:
 # - Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK
 # - Frontend /api/charts: returns 401 Unauthorized (correct — auth required)
 # - Frontend /api/interpret: returns "Interpretation failed" (backend 404)
-# - Backend /health: https://astrology-api.up.railway.app/health returns OK
-# - Backend /api/v1/*: All routes return 404 (Railway deployment not linked to GitHub / stale build)
-# - Vercel rewrites updated to astrology-api.up.railway.app (pushed b2f2b7c)
+# - Backend /health: https://astrology-api.up.railway.app/health returns {"ok":true,"mongo":"up"}
+# - Backend /api/v1/*: All routes return 404 (Railway serves DIFFERENT CODEBASE)
+# - Backend openapi.json: Shows /api/auth/*, /api/nguoi/* — NOT the local /api/v1/* routes
+# - Local TestClient: All 11 API route modules work locally, return 401 auth required
+# - GitHub repo: https://github.com/welkukd/astrology (synced, origin/main up to date)
 # - Railway CLI: Not authenticated — requires user to login and link project
-# - Local TestClient: All routes work, return 401 auth required (correct behavior)
