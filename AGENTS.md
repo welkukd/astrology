@@ -113,3 +113,22 @@ curl -s https://astrology-api.up.railway.app/api/v1/natal -X POST -H "Content-Ty
   3. Add env vars: GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
   4. Trigger fresh deploy
 - CASH FLOW PROXIMITY: HIGH — Astrology app ready for production once Railway fixed
+
+### VERIFIED 2026-11-06 07:38:00 EDT (Autonomous Orchestrator Run 6):
+- Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK (200)
+- Frontend /api/charts: returns 401 Unauthorized (correct — auth required)
+- Frontend /api/interpret: returns "Interpretation failed" (backend 404)
+- Backend /health: https://astrology-api.up.railway.app/health returns {"ok":true,"mongo":"up"} (200)
+- Backend /api/v1/*: All routes return 404 (Railway still serves DIFFERENT CODEBASE — Vietnamese endpoints /api/nguoi/*)
+- Backend openapi.json: 74 paths, all Vietnamese /api/auth/*, /api/nguoi/* — NOT local /api/v1/*
+- GitHub repo: https://github.com/welkukd/astrology (synced, origin/main up to date)
+- EXTERNAL BLOCKER UNCHANGED: Railway project linked to wrong repo/stale commit
+- CASH FLOW PROXIMITY: HIGH — Astrology app ready for production once Railway fixed
+
+### VERIFIED 2026-11-06 09:30:00 EDT (Autonomous Orchestrator Run 7):
+- railway.json verified at root with workingDirectory: "apps/api"
+- nixpacks.toml verified at root with correct build phases
+- apps/api/app/main.py exists (FastAPI entry point)
+- apps/api/requirements.txt complete (fastapi, uvicorn, flatlib, pyswisseph, weasyprint, stripe, supabase)
+- LOCAL INFRASTRUCTURE READY: All Railway config files correct
+- EXTERNAL BLOCKER UNCHANGED: User must link Railway project to welkukd/astrology GitHub repo and configure env vars
