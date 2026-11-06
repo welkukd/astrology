@@ -3,8 +3,22 @@ aptPkgs = [
   "libpango-1.0-0",
   "libpangocairo-1.0-0",
   "libcairo2",
-  "libgdk-pixbuf2.0-0",
+  "libgdk-pixbuf-2.0-0",
   "libffi-dev",
   "fonts-noto",
   "fonts-noto-extra",
 ]
+
+[phases.install]
+cmds = [
+  "pip install -r requirements.txt",
+]
+
+[phases.build]
+cmds = [
+  "python -m py_compile app/main.py",
+  "python -c "from app.main import app; print('Import OK')"",
+]
+
+[phases.start]
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
