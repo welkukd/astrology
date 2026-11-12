@@ -144,3 +144,40 @@ curl -s https://astrology-api.up.railway.app/api/v1/natal -X POST -H "Content-Ty
 - EXTERNAL BLOCKER UNCHANGED: Railway project linked to wrong repo/stale commit
 - LOCAL INFRASTRUCTURE READY: railway.json, nixpacks.toml, requirements.txt all verified correct
 - CASH FLOW PROXIMITY: HIGH — Astrology app ready for production once Railway fixed
+
+### VERIFIED 2026-11-11 08:07:00 EDT (Autonomous Orchestrator Run 12):
+- Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK (200)
+- Frontend /api/charts: returns 401 Unauthorized (correct — auth required)
+- Frontend /api/interpret: returns "Interpretation failed" (backend 404)
+- Backend /health: https://astrology-api.up.railway.app/health returns {"ok":true,"mongo":"up"} (200)
+- Backend /api/v1/*: All routes return 404 (Railway still serves DIFFERENT CODEBASE — Vietnamese endpoints /api/nguoi/*)
+- Vercel env vars: Supabase configured, API URL configured, GEMINI_API_KEY set
+- Railway config: railway.json, nixpacks.toml, requirements.txt all verified correct at root with workingDirectory: apps/api
+- Git status: origin/main up to date (commit 77eea593)
+- EXTERNAL BLOCKER UNCHANGED: Railway project linked to wrong repo/stale commit (serving Vietnamese API /api/nguoi/*)
+- CASH FLOW PROXIMITY: HIGH — Astrology app ready for production once Railway fixed
+
+### VERIFIED 2026-11-11 21:25:00 EDT (Autonomous Orchestrator Run 13):
+- Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK (200)
+- Frontend /api/charts: returns 401 Unauthorized (correct — auth required)
+- Frontend /api/interpret: returns "Interpretation failed" (backend 404)
+- Backend /health: https://astrology-api.up.railway.app/health returns {"ok":true,"mongo":"up"} (200)
+- Backend /api/v1/*: All routes return 404 (Railway still serves DIFFERENT CODEBASE — Vietnamese endpoints /api/nguoi/*)
+- Vercel env vars: Supabase configured, API URL configured, GEMINI_API_KEY set
+- Railway config: railway.json, nixpacks.toml, requirements.txt all verified correct at root with workingDirectory: apps/api
+- Git status: origin/main up to date (commit 77eea593)
+- EXTERNAL BLOCKER UNCHANGED: Railway project linked to wrong repo/stale commit (serving Vietnamese API /api/nguoi/*)
+- CASH FLOW PROXIMITY: HIGH — Astrology app ready for production once Railway fixed
+
+### VERIFIED 2026-11-12 00:17:00 EDT (Autonomous Orchestrator Run 14):
+- Frontend: https://astrology-awbato3ho-zone-1433.vercel.app/api/health returns OK (200)
+- Frontend /api/charts: returns 401 Unauthorized (correct — auth required)
+- Frontend /api/interpret: returns "Interpretation failed" (backend 404)
+- Backend /health: https://astrology-api.up.railway.app/health returns {"ok":true,"mongo":"up"} (200)
+- Backend /api/v1/*: All routes return 404 (Railway still serves DIFFERENT CODEBASE — Vietnamese endpoints /api/nguoi/*)
+- Backend openapi.json: 74 paths, all Vietnamese /api/auth/*, /api/nguoi/* — NOT local /api/v1/* routes
+- Vercel env vars: Supabase configured, API URL configured, GEMINI_API_KEY set
+- Railway config: railway.json, nixpacks.toml, requirements.txt all verified correct at root with workingDirectory: apps/api
+- Git status: origin/main up to date (commit 77eea593)
+- EXTERNAL BLOCKER UNCHANGED: Railway project linked to wrong repo/stale commit (serving Vietnamese API /api/nguoi/*)
+- CASH FLOW PROXIMITY: HIGH — Astrology app ready for production once Railway fixed
